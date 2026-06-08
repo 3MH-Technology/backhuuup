@@ -90,7 +90,10 @@ class AuthService:
         await session.commit()
         await session.refresh(user)
 
-        send_verification_email(email, code)
+        try:
+            send_verification_email(email, code)
+        except Exception:
+            pass
 
         token = create_access_token({"sub": str(user.id), "email": user.email})
         return {
@@ -123,7 +126,10 @@ class AuthService:
         user.verification_expires = None
         await session.commit()
 
-        send_welcome_email(user.email, user.username)
+        try:
+            send_welcome_email(user.email, user.username)
+        except Exception:
+            pass
 
         return {"message": "تم توثيق البريد الإلكتروني بنجاح! 🎉"}
 
@@ -143,7 +149,10 @@ class AuthService:
         user.verification_expires = now + timedelta(minutes=15)
         await session.commit()
 
-        send_verification_email(user.email, code)
+        try:
+            send_verification_email(user.email, code)
+        except Exception:
+            pass
         return {"message": f"تم إرسال رمز جديد إلى {user.email}"}
 
     @staticmethod
