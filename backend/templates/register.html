@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolf Host — استضافة الذب هوست | إنشاء حساب</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Tajawal"', 'system-ui', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Tajawal', system-ui, sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #0a0f1e 0%, #111827 50%, #0a0f1e 100%); }
+    .glass-card { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body class="gradient-bg min-h-screen flex flex-col items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl shadow-2xl shadow-emerald-500/20 mb-5">
+        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+        </svg>
+      </div>
+      <h1 class="text-4xl font-black text-white">Wolf Host</h1>
+      <p class="text-lg text-gray-400 mt-1 font-medium">استضافة الذب هوست</p>
+      <p class="text-gray-500 text-sm mt-2">انضم إلى مجتمع المطورين العرب</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-8">
+      <form id="registerForm" class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">اسم المستخدم</label>
+          <input type="text" id="username" required
+            class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none"
+            placeholder="m7md">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">البريد الإلكتروني</label>
+          <input type="email" id="email" required
+            class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none"
+            placeholder="m@example.com">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">كلمة المرور</label>
+          <input type="password" id="password" required minlength="6"
+            class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none"
+            placeholder="••••••••">
+        </div>
+        <button type="submit"
+          class="w-full py-3 bg-gradient-to-l from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-emerald-500/20">
+          إنشاء الحساب
+        </button>
+      </form>
+      <div id="errorMsg" class="mt-4 text-red-400 text-sm text-center hidden"></div>
+      <p class="mt-6 text-center text-gray-400 text-sm">
+        لديك حساب بالفعل؟
+        <a href="/login" class="text-emerald-400 hover:text-emerald-300 font-medium">تسجيل الدخول</a>
+      </p>
+    </div>
+
+    <div class="mt-8 text-center space-y-2">
+      <p class="text-gray-500 text-xs">مبني بـ ❤️ بواسطة</p>
+      <p class="text-gray-300 text-sm font-bold">الذئب الأبيض 🐺</p>
+      <div class="flex items-center justify-center gap-4 text-xs text-gray-600">
+        <a href="https://t.me/j49_c" target="_blank" class="hover:text-emerald-400 transition">تيليجرام: @j49_c</a>
+        <span>|</span>
+        <a href="https://t.me/O5O6J" target="_blank" class="hover:text-emerald-400 transition">القناة: @O5O6J</a>
+        <span>|</span>
+        <a href="https://x.com/wolfhost_1" target="_blank" class="hover:text-emerald-400 transition">إكس: @wolfhost_1</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('errorMsg');
+      errorEl.classList.add('hidden');
+      try {
+        const res = await fetch(`${API}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', data.access_token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          window.location.href = '/dashboard';
+        } else {
+          errorEl.textContent = typeof data.detail === 'string' ? data.detail : 'فشل إنشاء الحساب';
+          errorEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errorEl.textContent = 'خطأ في الاتصال بالخادم';
+        errorEl.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+# ─────────────────────────────────────────────────────────────────────
+# Wolf Host — Production Docker Compose
+# ─────────────────────────────────────────────────────────────────────
+# One command to spin up the entire platform:
+#   docker compose up -d
+#
+# Network topology:
+#   infra_net (internal)     ← postgres + backend (no external access)
+#   estidafa_bot_net (bridge) ← nginx + backend + user bot containers
+#
+#   postgres CAN ONLY reach → infra_net
+#   nginx    CAN ONLY reach → estidafa_bot_net + internet (80/443)
+#   backend  reaches BOTH   → infra_net (DB) + estidafa_bot_net (Docker mgmt)
+#   bot containers ONLY     → estidafa_bot_net (NO access to infra_net)
+# ─────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-wolfhost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB:       ${POSTGRES_DB:-wolfhost}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wolfhost} -d ${POSTGRES_DB:-wolfhost}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - infra_net
+    # ── NO ports exposed — completely isolated on infra_net ──────────
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # ── FastAPI Backend ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # No ports exposed to host — all traffic via nginx on bot net
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL:            postgresql+asyncpg://${POSTGRES_USER:-wolfhost}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wolfhost}
+      SECRET_KEY:              ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DOMAIN:                  ${DOMAIN:?Set DOMAIN in .env}
+      LOG_LEVEL:               ${LOG_LEVEL:-info}
+      MAX_BOTS_PER_USER:       ${MAX_BOTS_PER_USER:-3}
+      CONTAINER_MEM_LIMIT_MB:  ${CONTAINER_MEM_LIMIT_MB:-128}
+      CONTAINER_CPU_NANOS:     ${CONTAINER_CPU_NANOS:-500000000}
+      PYTHON_IMAGE:            ${PYTHON_IMAGE:-python:3.10-alpine}
+      PHP_IMAGE:               ${PHP_IMAGE:-php:8.2-alpine}
+      DOCKER_NETWORK:          estidafa_bot_net
+    volumes:
+      # Docker socket → backend creates/manages user bot containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Shared tmp for bot code artifacts
+      - bot_code:/tmp
+    networks:
+      - infra_net           # → postgres
+      - estidafa_bot_net    # → nginx + user containers
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE    # minimal capability to bind port 8000
+
+  # ── Nginx Reverse Proxy ────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_ssl:/etc/letsencrypt
+      - nginx_www:/var/www/certbot
+      # Runtime map file updated by backend for wildcard routing
+      - nginx_maps:/etc/nginx/maps
+    depends_on:
+      - backend
+    networks:
+      - estidafa_bot_net    # → user containers (direct webhook proxying)
+      # NOT on infra_net — nginx must NEVER reach postgres directly
+    security_opt:
+      - no-new-privileges:true
+
+  # ── Certbot (Let's Encrypt auto-renewal) ──────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - nginx_ssl:/etc/letsencrypt
+      - nginx_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet --no-self-upgrade;
+        sleep 12h &
+        wait \$${!};
+      done"
+    networks:
+      - estidafa_bot_net
+
+
+# ── Networks ─────────────────────────────────────────────────────────
+networks:
+  infra_net:
+    driver: bridge
+    internal: true
+    # ── NO external access — backend + postgres ONLY ────────────────
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+  estidafa_bot_net:
+    driver: bridge
+    # ── External access allowed (containers need internet for APIs) ──
+    # ── But containers CANNOT reach infra_net — no route exists ─────
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+
+
+# ── Volumes ──────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  bot_code:
+  nginx_ssl:
+  nginx_www:
+  nginx_maps:
