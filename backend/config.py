@@ -18,16 +18,9 @@ class Settings(BaseSettings):
     max_bots_per_user: int = 3
     container_mem_limit_mb: int = 128
     container_cpu_nanos: int = 500_000_000
-
-    docker_network: str = "estidafa_bot_net"
-    python_image: str = "python:3.10-alpine"
-    php_image: str = "php:8.2-alpine"
     container_auto_restart_max: int = 3
 
     log_level: str = "info"
-    container_log_max_size: str = "10m"
-    container_log_max_file: int = 3
-    container_log_driver: str = "json-file"
 
     domain: str = "wolf-host.pages.dev"
     backup_git_repo: str = "https://github.com/3MH-Technology/backhuuup.git"

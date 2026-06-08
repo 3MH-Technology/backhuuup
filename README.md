@@ -21,13 +21,13 @@ Autonomous Bot Hosting Platform for Arab Developers
 ## Architecture
 
 ```
-Cloudflare Proxy (CDN + SSL) → Hugging Face Space (DinD) → Bot Containers
+Cloudflare Proxy (CDN + SSL) → Hugging Face Space → FastAPI (subprocess bots)
 ```
 
-- **Docker-in-Docker** — every user bot runs in an isolated container
+- **Subprocess isolation** — every user bot runs as an isolated Python process
 - **FastAPI** — async Python backend with PostgreSQL (Supabase/Neon)
 - **Tailwind CSS** — Arabic RTL dashboard
-- **Self-healing** — auto-restarts crashed containers every 30s
+- **Self-healing** — auto-restarts crashed processes every 30s
 - **Auto-backup** — database backups pushed to GitHub every 6 hours
 
 ---

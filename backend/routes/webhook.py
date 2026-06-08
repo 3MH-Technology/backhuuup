@@ -8,10 +8,13 @@ from sqlalchemy import select
 
 from models.database import get_session
 from models.bot import Bot
+from services.container_manager import ContainerManager
 
 logger = logging.getLogger("wolfhost.webhook")
 
 router = APIRouter(prefix="/api/webhook", tags=["Webhook"])
+
+BOT_PROCESS_PORTS: dict[str, int] = {}
 
 
 def extract_slug(request: Request, x_bot_slug: str) -> str:
@@ -23,6 +26,14 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
     if dot_index > 0:
         return host[:dot_index].strip().lower()
     return ""
+
+
+def _get_bot_port(slug: str) -> int:
+    return BOT_PROCESS_PORTS.get(slug, 8080)
+
+
+def _set_bot_port(slug: str, port: int):
+    BOT_PROCESS_PORTS[slug] = port
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -45,13 +56,12 @@ async def proxy_webhook(
     if bot.status != "running" or not bot.container_id:
         return {"ok": False, "error": f"Bot '{slug}' is not running", "bot_status": bot.status}
 
-    from services.container_manager import ContainerManager
     container_status = ContainerManager.get_status(bot.container_id)
     if container_status != "running":
-        return {"ok": False, "error": f"Bot container is {container_status}", "bot_status": container_status}
+        return {"ok": False, "error": f"Bot is {container_status}", "bot_status": container_status}
 
-    container_hostname = f"wh_{bot.user_id}_{slug}"
-    target_url = f"http://{container_hostname}:8080/{path}"
+    port = _get_bot_port(slug)
+    target_url = f"http://127.0.0.1:{port}/{path}"
 
     body = await request.body()
     headers_to_forward = {
@@ -77,8 +87,8 @@ async def proxy_webhook(
                     async for chunk in resp.content.iter_chunked(8192):
                         yield chunk
         except aiohttp.ClientConnectorError:
-            logger.error(f"Webhook proxy: cannot connect to {container_hostname}:8080")
-            yield b'{"ok":false,"error":"Bot container unreachable"}'
+            logger.error(f"Webhook proxy: cannot connect to bot {slug} on port {port}")
+            yield b'{"ok":false,"error":"Bot unreachable"}'
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning(f"Webhook proxy failed for {slug}: {e}")
             yield f'{{"ok":false,"error":"{e}"}}'.encode()
