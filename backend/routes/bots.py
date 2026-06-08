@@ -35,13 +35,13 @@ def _slugify(name: str) -> str:
     return name.strip("-")[:60] or "bot"
 
 
-def _unique_slug(session: AsyncSession, base_slug: str, user_id: int) -> str:
+async def _unique_slug(session: AsyncSession, base_slug: str, user_id: int) -> str:
     slug = base_slug
     counter = 1
     while True:
-        existing = session.execute(
+        existing = (await session.execute(
             select(Bot).where(Bot.slug == slug, Bot.user_id == user_id)
-        ).scalar_one_or_none()
+        )).scalar_one_or_none()
         if not existing:
             return slug
         slug = f"{base_slug}-{counter}"

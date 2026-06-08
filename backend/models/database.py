@@ -55,8 +55,6 @@ async def init_db():
     async with engine.begin() as conn:
         from models.user import User
         from models.bot import Bot
-        await conn.execute(text("DROP SCHEMA public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
         await conn.run_sync(Base.metadata.create_all)
 
     async with engine.begin() as conn:

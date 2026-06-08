@@ -11,6 +11,11 @@ from sqlalchemy import select
 from config import settings
 from models.database import get_session
 from models.user import User
+from services.email_service import (
+    generate_verification_code,
+    send_verification_email,
+    send_welcome_email,
+)
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security_scheme = HTTPBearer()
@@ -47,19 +52,99 @@ class AuthService:
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
         token = create_access_token({"sub": str(user.id), "email": user.email})
-        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "username": user.username}}
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {"id": user.id, "email": user.email, "username": user.username},
+            "verified": user.is_verified,
+        }
 
     @staticmethod
-    async def register(username: str, email: str, password: str, session: AsyncSession) -> dict:
+    async def register(username: str, email: str, password: str, device_fingerprint: str, session: AsyncSession) -> dict:
         existing = await session.execute(select(User).where((User.email == email) | (User.username == username)))
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Email or username already registered")
-        user = User(username=username, email=email, hashed_password=get_password_hash(password))
+
+        if device_fingerprint:
+            existing_device = await session.execute(
+                select(User).where(User.device_fingerprint == device_fingerprint)
+            )
+            if existing_device.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=403,
+                    detail="هذا الجهاز مسجل بحساب آخر. كل جهاز يُسمح بحساب واحد فقط.",
+                )
+
+        code = generate_verification_code()
+        now = datetime.now(timezone.utc)
+        user = User(
+            username=username,
+            email=email,
+            hashed_password=get_password_hash(password),
+            is_verified=False,
+            verification_code=code,
+            verification_expires=now + timedelta(minutes=15),
+            device_fingerprint=device_fingerprint or None,
+        )
         session.add(user)
         await session.commit()
         await session.refresh(user)
+
+        send_verification_email(email, code)
+
         token = create_access_token({"sub": str(user.id), "email": user.email})
-        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "username": user.username}}
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {"id": user.id, "email": user.email, "username": user.username},
+            "verified": False,
+            "message": f"تم إرسال رمز التحقق إلى {email}",
+        }
+
+    @staticmethod
+    async def verify_email(user_id: int, code: str, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user.is_verified:
+            return {"message": "البريد موثق بالفعل"}
+
+        if user.verification_code != code:
+            raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح")
+
+        now = datetime.now(timezone.utc)
+        if user.verification_expires and user.verification_expires.replace(tzinfo=timezone.utc) < now:
+            raise HTTPException(status_code=400, detail="انتهت صلاحية رمز التحقق")
+
+        user.is_verified = True
+        user.verification_code = None
+        user.verification_expires = None
+        await session.commit()
+
+        send_welcome_email(user.email, user.username)
+
+        return {"message": "تم توثيق البريد الإلكتروني بنجاح! 🎉"}
+
+    @staticmethod
+    async def resend_code(user_id: int, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user.is_verified:
+            return {"message": "البريد موثق بالفعل"}
+
+        code = generate_verification_code()
+        now = datetime.now(timezone.utc)
+        user.verification_code = code
+        user.verification_expires = now + timedelta(minutes=15)
+        await session.commit()
+
+        send_verification_email(user.email, code)
+        return {"message": f"تم إرسال رمز جديد إلى {user.email}"}
 
     @staticmethod
     async def get_current_user(

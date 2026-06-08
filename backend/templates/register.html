@@ -34,7 +34,8 @@
       <p class="text-gray-500 text-sm mt-2">انضم إلى مجتمع المطورين العرب</p>
     </div>
 
-    <div class="glass-card rounded-2xl p-8">
+    <!-- Register Form -->
+    <div id="registerCard" class="glass-card rounded-2xl p-8">
       <form id="registerForm" class="space-y-5">
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">اسم المستخدم</label>
@@ -66,6 +67,42 @@
       </p>
     </div>
 
+    <!-- Email Verification Card -->
+    <div id="verifyCard" class="glass-card rounded-2xl p-8 hidden">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-700 rounded-2xl mb-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white">توثيق البريد الإلكتروني</h2>
+        <p class="text-gray-400 text-sm mt-2">تم إرسال رمز تحقق إلى بريدك</p>
+        <p id="verifyEmail" class="text-blue-400 text-sm font-medium mt-1"></p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">رمز التحقق (6 أرقام)</label>
+          <input type="text" id="verifyCode" maxlength="6" required
+            class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none text-center text-2xl tracking-[8px] font-mono"
+            placeholder="123456">
+        </div>
+        <button onclick="verifyEmail()"
+          class="w-full py-3 bg-gradient-to-l from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl transition-all duration-300">
+          توثيق البريد
+        </button>
+        <button onclick="resendCode()" id="resendBtn"
+          class="w-full py-3 bg-gray-800/50 border border-gray-700/50 text-gray-400 hover:text-white hover:border-gray-600 rounded-xl transition text-sm">
+          إعادة إرسال الرمز
+        </button>
+        <button onclick="skipVerification()"
+          class="w-full py-2 text-gray-500 hover:text-gray-400 text-sm transition">
+          تخطي والذهاب للوحة التحكم
+        </button>
+      </div>
+      <div id="verifyError" class="mt-4 text-red-400 text-sm text-center hidden"></div>
+      <div id="verifySuccess" class="mt-4 text-emerald-400 text-sm text-center hidden"></div>
+    </div>
+
     <div class="mt-8 text-center space-y-2">
       <p class="text-gray-500 text-xs">مبني بـ ❤️ بواسطة</p>
       <p class="text-gray-300 text-sm font-bold">الذئب الأبيض 🐺</p>
@@ -81,24 +118,56 @@
 
   <script>
     const API = window.location.origin;
+
+    function getDeviceFingerprint() {
+      let fp = localStorage.getItem('device_fp');
+      if (!fp) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('Wolf Host', 2, 2);
+        const canvasData = canvas.toDataURL();
+        const ua = navigator.userAgent;
+        const screen_info = `${screen.width}x${screen.height}x${screen.colorDepth}`;
+        const raw = canvasData + ua + screen_info + navigator.language + Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+          const char = raw.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash |= 0;
+        }
+        fp = 'fp_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36);
+        localStorage.setItem('device_fp', fp);
+      }
+      return fp;
+    }
+
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = document.getElementById('username').value;
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
+      const device_fingerprint = getDeviceFingerprint();
       const errorEl = document.getElementById('errorMsg');
       errorEl.classList.add('hidden');
       try {
         const res = await fetch(`${API}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password }),
+          body: JSON.stringify({ username, email, password, device_fingerprint }),
         });
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem('token', data.access_token);
           localStorage.setItem('user', JSON.stringify(data.user));
-          window.location.href = '/dashboard';
+          if (data.verified === false) {
+            document.getElementById('registerCard').classList.add('hidden');
+            document.getElementById('verifyCard').classList.remove('hidden');
+            document.getElementById('verifyEmail').textContent = email;
+          } else {
+            window.location.href = '/dashboard';
+          }
         } else {
           errorEl.textContent = typeof data.detail === 'string' ? data.detail : 'فشل إنشاء الحساب';
           errorEl.classList.remove('hidden');
@@ -108,6 +177,57 @@
         errorEl.classList.remove('hidden');
       }
     });
+
+    async function verifyEmail() {
+      const code = document.getElementById('verifyCode').value;
+      const errorEl = document.getElementById('verifyError');
+      const successEl = document.getElementById('verifySuccess');
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
+      if (code.length !== 6) { errorEl.textContent = 'أدخل 6 أرقام'; errorEl.classList.remove('hidden'); return; }
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API}/api/auth/verify-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          successEl.textContent = data.message;
+          successEl.classList.remove('hidden');
+          setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
+        } else {
+          errorEl.textContent = typeof data.detail === 'string' ? data.detail : 'خطأ';
+          errorEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errorEl.textContent = 'خطأ في الاتصال';
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    async function resendCode() {
+      const btn = document.getElementById('resendBtn');
+      btn.disabled = true;
+      btn.textContent = 'جاري الإرسال...';
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`${API}/api/auth/resend-code`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        btn.textContent = 'تم الإرسال ✓';
+        setTimeout(() => { btn.textContent = 'إعادة إرسال الرمز'; btn.disabled = false; }, 30000);
+      } catch (err) {
+        btn.textContent = 'إعادة إرسال الرمز';
+        btn.disabled = false;
+      }
+    }
+
+    function skipVerification() {
+      window.location.href = '/dashboard';
+    }
   </script>
 </body>
 </html>
