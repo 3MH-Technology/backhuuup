@@ -86,7 +86,7 @@ async def create_bot(
         )
 
     base_slug = _slugify(req.name)
-    slug = _unique_slug(session, base_slug, user.id)
+    slug = await _unique_slug(session, base_slug, user.id)
 
     bot = Bot(
         user_id=user.id,
