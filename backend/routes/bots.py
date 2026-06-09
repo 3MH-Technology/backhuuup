@@ -105,7 +105,7 @@ async def create_bot(
         "slug": bot.slug,
         "bot_type": bot.bot_type,
         "status": "created",
-        "webhook_url": f"https://{bot.slug}.{settings.domain}/",
+        "webhook_url": f"https://{settings.domain}/api/webhook/",
     }
 
 
@@ -134,7 +134,7 @@ async def get_bot(
         "restart_count": bot.restart_count,
         "created_at": bot.created_at.isoformat() if bot.created_at else None,
         "resource_usage": usage,
-        "webhook_url": f"https://{bot.slug}.{settings.domain}/" if bot.slug else None,
+        "webhook_url": f"https://{settings.domain}/api/webhook/",
     }
 
 

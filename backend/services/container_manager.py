@@ -3,12 +3,9 @@ import logging
 import os
 import re
 import resource
-import shutil
-import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 import psutil
 
@@ -21,6 +18,20 @@ BOTS_DIR = Path("/app/data/bots")
 
 class ContainerManager:
     _instances: dict[str, dict] = {}
+    _port_allocator = iter(range(9000, 10000))
+
+    @staticmethod
+    def _allocate_port() -> int:
+        return next(ContainerManager._port_allocator)
+
+    @staticmethod
+    def _release_port(port: int):
+        pass
+
+    @staticmethod
+    def get_bot_port(container_id: str) -> int | None:
+        inst = ContainerManager._instances.get(container_id)
+        return inst["port"] if inst else None
 
     @staticmethod
     def container_name(user_id: int, slug: str) -> str:
@@ -56,6 +67,8 @@ class ContainerManager:
         log_file = work_dir / "bot.log"
         log_fh = open(log_file, "w", encoding="utf-8")
 
+        port = cls._allocate_port()
+
         if bot_type == "python":
             if requirements.strip():
                 loop = asyncio.get_event_loop()
@@ -70,9 +83,15 @@ class ContainerManager:
                 )
             cmd = [sys.executable, "-u", str(work_dir / "bot.py")]
         else:
-            cmd = ["php", "-S", "0.0.0.0:8080", "-t", str(work_dir), str(work_dir / "index.php")]
+            cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(work_dir / "index.php")]
 
-        env = {**os.environ, "PYTHONUNBUFFERED": "1", "HOME": str(work_dir), "TMPDIR": str(work_dir)}
+        env = {
+            **os.environ,
+            "PYTHONUNBUFFERED": "1",
+            "HOME": str(work_dir),
+            "TMPDIR": str(work_dir),
+            "PORT": str(port),
+        }
 
         try:
             process = await asyncio.create_subprocess_exec(
@@ -92,9 +111,10 @@ class ContainerManager:
                 "work_dir": work_dir,
                 "user_id": user_id,
                 "bot_id": bot_id,
+                "port": port,
             }
 
-            logger.info(f"Bot {name} started (PID {process.pid})")
+            logger.info(f"Bot {name} started (PID {process.pid}, port {port})")
             return {
                 "status": "success",
                 "container_id": name,

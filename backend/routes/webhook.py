@@ -14,8 +14,6 @@ logger = logging.getLogger("wolfhost.webhook")
 
 router = APIRouter(prefix="/api/webhook", tags=["Webhook"])
 
-BOT_PROCESS_PORTS: dict[str, int] = {}
-
 
 def extract_slug(request: Request, x_bot_slug: str) -> str:
     slug = x_bot_slug.strip().lower()
@@ -28,20 +26,17 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
     return ""
 
 
-def _get_bot_port(slug: str) -> int:
-    return BOT_PROCESS_PORTS.get(slug, 8080)
-
-
-def _set_bot_port(slug: str, port: int):
-    BOT_PROCESS_PORTS[slug] = port
+@router.api_route("/", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default="", alias="X-Bot-Slug")):
+    return await _proxy(request, "", x_bot_slug)
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy_webhook(
-    request: Request,
-    path: str,
-    x_bot_slug: str = Header(default="", alias="X-Bot-Slug"),
-):
+async def proxy_webhook(request: Request, path: str, x_bot_slug: str = Header(default="", alias="X-Bot-Slug")):
+    return await _proxy(request, path, x_bot_slug)
+
+
+async def _proxy(request: Request, path: str, x_bot_slug: str):
     slug = extract_slug(request, x_bot_slug)
     if not slug:
         raise HTTPException(status_code=400, detail="Missing bot slug")
@@ -60,10 +55,11 @@ async def proxy_webhook(
     if container_status != "running":
         return {"ok": False, "error": f"Bot is {container_status}", "bot_status": container_status}
 
-    port = _get_bot_port(slug)
-    target_url = f"http://127.0.0.1:{port}/{path}"
+    port = ContainerManager.get_bot_port(bot.container_id) or 8080
+    target_url = f"http://127.0.0.1:{port}/{path}" if path else f"http://127.0.0.1:{port}/"
 
     body = await request.body()
+
     headers_to_forward = {
         k: v for k, v in request.headers.items()
         if k.lower() not in ("host", "x-bot-slug", "content-length", "x-forwarded-for",
