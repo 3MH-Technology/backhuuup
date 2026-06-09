@@ -94,3 +94,16 @@ async def reset_password(request: Request, req: ResetPasswordRequest, session: A
 @router.get("/me")
 async def me(user=Depends(AuthService.get_current_user)):
     return {"id": user.id, "username": user.username, "email": user.email}
+
+
+@router.get("/debug-smtp")
+async def debug_smtp():
+    import os
+    return {
+        "smtp_user_setting": bool(settings.smtp_user),
+        "smtp_pass_setting": bool(settings.smtp_password),
+        "smtp_user_env": os.environ.get("SMTP_USER", "")[:6] + "..." if os.environ.get("SMTP_USER") else None,
+        "smtp_pass_env": bool(os.environ.get("SMTP_PASSWORD")),
+        "smtp_host": settings.smtp_host,
+        "smtp_port": settings.smtp_port,
+    }
