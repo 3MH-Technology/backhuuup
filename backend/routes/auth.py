@@ -101,11 +101,23 @@ async def me(user=Depends(AuthService.get_current_user)):
 
 @router.get("/debug-smtp")
 async def debug_smtp():
+    import smtplib
+    smtp_user = os.environ.get("SMTP_USER", "") or settings.smtp_user
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "") or settings.smtp_password
+    smtp_result = None
+    if smtp_user and smtp_pass:
+        try:
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.quit()
+            smtp_result = "OK"
+        except Exception as e:
+            smtp_result = str(e)[:200]
     return {
         "smtp_user_setting": bool(settings.smtp_user),
         "smtp_pass_setting": bool(settings.smtp_password),
-        "smtp_user_env": os.environ.get("SMTP_USER", "")[:6] + "..." if os.environ.get("SMTP_USER") else None,
-        "smtp_pass_env": bool(os.environ.get("SMTP_PASSWORD")),
-        "smtp_host": settings.smtp_host,
-        "smtp_port": settings.smtp_port,
+        "smtp_user_env": smtp_user[:6] + "..." if smtp_user else None,
+        "smtp_pass_env": bool(smtp_pass),
+        "smtp_test": smtp_result,
     }
