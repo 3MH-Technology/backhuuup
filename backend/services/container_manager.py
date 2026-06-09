@@ -126,25 +126,10 @@ _socket.getaddrinfo = _ipv4_getaddrinfo
 
     @staticmethod
     def _write_boot_loader(work_dir: Path):
-        """Boot loader — forces IPv4 + patches telebot proxy automatically."""
+        """Boot loader — sitecustomize.py handles IPv4, just runs user bot."""
         code = r'''"""_wolf_boot.py — Wolf Host boot loader."""
-import os as _os, sys as _sys
+import sys as _sys
 
-# ── automatic telebot proxy ──
-_tg_api_url = _os.environ.get("TELEGRAM_BOT_API_URL", "")
-if _tg_api_url:
-    _orig_import = __builtins__.__import__ if isinstance(__builtins__, dict) else __builtins__.__import__
-    def _hook(name, *a, **kw):
-        mod = _orig_import(name, *a, **kw)
-        if name in ("telebot", "telebot.apihelper"):
-            try:
-                (mod if name == "telebot.apihelper" else mod.apihelper).API_URL = _tg_api_url
-            except Exception:
-                pass
-        return mod
-    (__builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__)["__import__"] = _hook
-
-# ── run user bot ──
 _user = _sys.argv[1] if len(_sys.argv) > 1 else "bot.py"
 _sys.argv = [_user] + _sys.argv[2:]
 with open(_user, "rb") as _f:
