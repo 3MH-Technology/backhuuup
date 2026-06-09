@@ -109,13 +109,13 @@
 
       <!-- Code / Upload Tabs for Python -->
       <div class="flex gap-2 mb-2">
-        <button onclick="switchCreateMode('python', 'code')" id="pyModeCode" class="tab-active px-4 py-2 text-sm font-medium rounded-xl">كتابة كود</button>
-        <button onclick="switchCreateMode('python', 'upload')" id="pyModeUpload" class="px-4 py-2 text-sm font-medium text-gray-500 rounded-xl hover:bg-white/5">رفع ملف</button>
+        <button onclick="switchCreateMode('python', 'code')" id="pythonModeCode" class="tab-active px-4 py-2 text-sm font-medium rounded-xl">كتابة كود</button>
+        <button onclick="switchCreateMode('python', 'upload')" id="pythonModeUpload" class="px-4 py-2 text-sm font-medium text-gray-500 rounded-xl hover:bg-white/5">رفع ملف</button>
       </div>
 
       <div class="card p-6">
         <!-- Python: Write Code -->
-        <div id="pyCreateCode">
+        <div id="pythonCreateCode">
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
@@ -135,7 +135,7 @@
         </div>
 
         <!-- Python: Upload File -->
-        <div id="pyCreateUpload" class="hidden">
+        <div id="pythonCreateUpload" class="hidden">
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
