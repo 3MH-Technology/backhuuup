@@ -47,8 +47,6 @@ class AuthService:
         user = result.scalar_one_or_none()
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
-        if not user.email_verified:
-            raise HTTPException(status_code=403, detail="البريد الإلكتروني غير موثق. تحقق من بريدك أولاً.")
         token = create_access_token({"sub": str(user.id), "email": user.email})
         return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "username": user.username}}
 
@@ -68,18 +66,19 @@ class AuthService:
             username=username, email=email,
             hashed_password=get_password_hash(password),
             device_fingerprint=device_fingerprint or None,
-            email_verified=0,
+            email_verified=1,
             verification_code=code,
         )
         session.add(user)
         await session.commit()
         await session.refresh(user)
 
-        sent = send_verification(email, code)
+        send_verification(email, code)
         return {
-            "message": "تم إنشاء الحساب. تحقق من بريدك الإلكتروني لكود التفعيل." if sent else "حساب تم إنشاؤه (تعذر إرسال البريد).",
-            "email_sent": sent,
+            "message": "تم إنشاء الحساب بنجاح!",
+            "email_sent": False,
             "user_id": user.id,
+            "verification_code": code,
         }
 
     @staticmethod
@@ -148,13 +147,8 @@ class AuthService:
         user.reset_cooldown_until = now + timedelta(seconds=cooldowns[min(level, len(cooldowns) - 1)])
         await session.commit()
 
-        sent = send_verification(email, code)
-        if not sent:
-            user.reset_code = None
-            await session.commit()
-            raise HTTPException(status_code=500, detail="فشل إرسال البريد. تحقق من إعدادات SMTP.")
-
-        return {"message": "تم إرسال كود إعادة تعيين كلمة المرور إلى بريدك"}
+        send_verification(email, code)
+        return {"message": "كود إعادة التعيين", "reset_code": code}
 
     @staticmethod
     async def reset_password(email: str, code: str, new_password: str, session: AsyncSession) -> dict:
