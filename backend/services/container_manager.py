@@ -169,13 +169,26 @@ with open(_user, "rb") as _f:
         port = await cls._allocate_port()
 
         if bot_type == "python":
-            req_file = work_dir / "requirements.txt"
-            if req_file.exists() and req_file.stat().st_size > 0:
-                loop = asyncio.get_event_loop()
+            # ── isolated venv per bot ──
+            venv_path = work_dir / "venv"
+            python_exe = str(venv_path / "bin" / "python")
+            loop = asyncio.get_event_loop()
+            if not (venv_path / "pyvenv.cfg").exists():
+                logger.info(f"Creating venv for {name} at {venv_path}")
                 await loop.run_in_executor(
                     None,
                     lambda: subprocess.run(
-                        [sys.executable, "-m", "pip", "install", "-q",
+                        [sys.executable, "-m", "venv", str(venv_path)],
+                        capture_output=True, timeout=60,
+                    ),
+                )
+            # ── auto-install requirements in isolated venv ──
+            req_file = work_dir / "requirements.txt"
+            if req_file.exists() and req_file.stat().st_size > 0:
+                await loop.run_in_executor(
+                    None,
+                    lambda: subprocess.run(
+                        [python_exe, "-m", "pip", "install", "-q",
                          "-r", str(req_file)],
                         cwd=str(work_dir),
                         capture_output=True, timeout=120,
@@ -186,7 +199,7 @@ with open(_user, "rb") as _f:
             if not entry.exists():
                 py_files = [f for f in work_dir.glob("*.py") if f.name != "_wolf_boot.py"]
                 entry = py_files[0] if py_files else entry
-            cmd = [sys.executable, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
+            cmd = [python_exe, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
         else:
             entry = work_dir / "index.php"
             if not entry.exists():
@@ -202,6 +215,7 @@ with open(_user, "rb") as _f:
             "HOME": str(work_dir),
             "TMPDIR": str(work_dir),
             "PYTHONUNBUFFERED": "1",
+            "PYTHONNOUSERSITE": "1",
             "PORT": str(port),
             "CF_PROXY": cf_proxy,
         }
