@@ -58,4 +58,4 @@ async def stream_logs(websocket: WebSocket, bot_id: int):
             return
         container_id = bot.container_id
 
-    await LogStreamer.subscribe(bot_id, websocket, container_id)
+    await LogStreamer.subscribe(bot_id, websocket, container_id, user_id=user_id)

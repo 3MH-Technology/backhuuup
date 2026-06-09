@@ -148,14 +148,19 @@ app.add_middleware(
     ],
 )
 
+_space_id = os.environ.get("SPACE_ID", "")
+_space_url = f"https://{_space_id}.hf.space" if _space_id else ""
+cors_origins = [
+    "https://wolf-host.pages.dev",
+    "http://localhost:7860",
+    "http://127.0.0.1:7860",
+]
+if _space_url:
+    cors_origins.append(_space_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://wolf-host.pages.dev",
-        "https://*.hf.space",
-        "http://localhost:7860",
-        "http://127.0.0.1:7860",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Bot-Slug", "X-Webhook-Token"],
