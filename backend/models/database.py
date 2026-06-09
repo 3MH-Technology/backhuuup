@@ -56,6 +56,7 @@ async def _add_missing_columns(conn):
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_date VARCHAR(20)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_attempts_today INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_cooldown_until TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token VARCHAR(64)",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",

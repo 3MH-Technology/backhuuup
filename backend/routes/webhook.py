@@ -26,24 +26,32 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
     return ""
 
 
-@router.api_route("/{slug}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy_webhook_slug(request: Request, slug: str):
+@router.api_route("/{token}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def proxy_webhook_token(request: Request, token: str):
     async with get_session() as session:
-        result = await session.execute(select(Bot).where(Bot.slug == slug))
+        result = await session.execute(select(Bot).where(Bot.webhook_token == token))
         bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail=f"No bot found with slug '{slug}'")
+    if not bot or not bot.webhook_active:
+        raise HTTPException(status_code=404, detail="Invalid webhook token")
     return await _proxy_bot(request, bot, "")
 
 
 @router.api_route("/", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default="", alias="X-Bot-Slug")):
-    return await _proxy(request, "", x_bot_slug)
+async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default="", alias="X-Bot-Slug"), x_webhook_token: str = Header(default="", alias="X-Webhook-Token")):
+    token = x_webhook_token.strip() or x_bot_slug.strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Missing webhook token")
+    async with get_session() as session:
+        result = await session.execute(select(Bot).where(Bot.webhook_token == token))
+        bot = result.scalar_one_or_none()
+    if not bot or not bot.webhook_active:
+        raise HTTPException(status_code=404, detail="Invalid webhook token")
+    return await _proxy_bot(request, bot, "")
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy_webhook(request: Request, path: str, x_bot_slug: str = Header(default="", alias="X-Bot-Slug")):
-    return await _proxy(request, path, x_bot_slug)
+async def proxy_webhook_legacy(request: Request, path: str):
+    return await proxy_webhook_root(request, "", "")
 
 
 async def _proxy_bot(request: Request, bot, path: str):

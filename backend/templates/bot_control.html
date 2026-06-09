@@ -123,13 +123,17 @@
               <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
-          <div id="webhookUrlSection" class="hidden mt-4">
-            <label class="block text-sm font-medium text-gray-300 mb-2">رابط Webhook</label>
+            <div id="webhookUrlSection" class="hidden mt-4">
+            <label class="block text-sm font-medium text-gray-300 mb-2">رابط Webhook (سري — لا تشاركه)</label>
             <div class="flex gap-2">
-              <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 text-sm" value="https://wolf-host.pages.dev/api/webhook/">
+              <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-yellow-300 text-sm" value="https://wolf-host.pages.dev/api/webhook/">
               <button onclick="copyWebhookUrl()" class="btn-primary px-4 py-2 rounded-xl text-white text-sm">نسخ</button>
             </div>
-            <p class="text-xs text-gray-500 mt-2">أرسل طلبات HTTP إلى هذا الرابط مع هيدر <code class="text-yellow-400">X-Bot-Slug</code></p>
+            <div id="webhookTokenSection" class="hidden mt-3">
+              <label class="block text-sm font-medium text-gray-300 mb-2">توكن التوثيق</label>
+              <input type="text" id="webhookToken" readonly class="code-area w-full px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-emerald-400 text-sm font-mono" value="">
+            </div>
+            <p class="text-xs text-gray-500 mt-2">الرابط فريد وآمن. لا أحد يقدر يخمنه.</p>
           </div>
         </div>
       </div>
@@ -239,6 +243,8 @@ bot.polling()
         document.getElementById('webhookUrlSection').classList.toggle('hidden', !bot.webhook_active);
         if (bot.webhook_active && bot.webhook_url) {
           document.getElementById('webhookUrl').value = bot.webhook_url;
+          document.getElementById('webhookToken').value = bot.webhook_token || '—';
+          document.getElementById('webhookTokenSection').classList.remove('hidden');
         }
 
         document.getElementById('infoId').textContent = bot.id;
@@ -334,6 +340,11 @@ bot.polling()
         const data = await res.json();
         document.getElementById('webhookToggle').checked = data.webhook_active;
         document.getElementById('webhookUrlSection').classList.toggle('hidden', !data.webhook_active);
+        if (data.webhook_active) {
+          document.getElementById('webhookUrl').value = data.webhook_url;
+          document.getElementById('webhookToken').value = data.webhook_token || '—';
+          document.getElementById('webhookTokenSection').classList.remove('hidden');
+        }
       } catch (e) { console.error(e); }
     }
 

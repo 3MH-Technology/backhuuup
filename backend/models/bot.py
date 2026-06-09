@@ -21,6 +21,7 @@ class Bot(Base):
 
     webhook_url = Column(String(512), nullable=True)
     webhook_active = Column(Boolean, default=False)
+    webhook_token = Column(String(64), nullable=True, index=True)
 
     restart_count = Column(Integer, default=0)
     expires_at = Column(DateTime(timezone=True), nullable=True)
