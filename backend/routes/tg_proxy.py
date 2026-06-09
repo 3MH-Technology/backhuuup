@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 import aiohttp
 from fastapi import APIRouter, Request, HTTPException
@@ -9,7 +10,7 @@ logger = logging.getLogger("wolfhost.tgproxy")
 
 router = APIRouter(prefix="/api/tg", tags=["Telegram Proxy"])
 
-TG_API_BASE = "https://api.telegram.org"
+TG_API_BASE = os.environ.get("TELEGRAM_API_BASE", "https://api.telegram.org")
 
 
 @router.api_route("/{token}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
