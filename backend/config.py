@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     log_level: str = "info"
 
     domain: str = "wolf-host.pages.dev"
+    webhook_url: str = "https://wolf-host.pages.dev/"
     backup_git_repo: str = "https://github.com/3MH-Technology/backhuuup.git"
     backup_interval_hours: int = 6
 

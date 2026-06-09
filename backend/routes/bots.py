@@ -106,7 +106,7 @@ def _bot_to_dict(bot: Bot) -> dict:
         "requirements": bot.requirements,
         "is_upload": bot.is_upload or False,
         "upload_path": bot.upload_path,
-        "webhook_url": bot.webhook_url or f"https://{settings.domain}/api/webhook/",
+        "webhook_url": bot.webhook_url or settings.webhook_url,
         "webhook_active": bot.webhook_active or False,
         "restart_count": bot.restart_count,
         "created_at": bot.created_at.isoformat() if bot.created_at else None,
@@ -182,7 +182,7 @@ async def create_bot_code(
         "bot_type": bot.bot_type,
         "status": "created",
         "expires_at": bot.expires_at.isoformat() if bot.expires_at else None,
-        "webhook_url": f"https://{settings.domain}/api/webhook/",
+        "webhook_url": settings.webhook_url,
     }
 
 
@@ -266,7 +266,7 @@ async def create_bot_upload(
         "status": "created",
         "is_upload": True,
         "expires_at": bot.expires_at.isoformat() if bot.expires_at else None,
-        "webhook_url": f"https://{settings.domain}/api/webhook/",
+        "webhook_url": settings.webhook_url,
     }
 
 
@@ -417,7 +417,7 @@ async def update_webhook(
         bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
 
     bot.webhook_active = not bot.webhook_active
-    bot.webhook_url = f"/api/webhook/" if bot.webhook_active else None
+    bot.webhook_url = settings.webhook_url if bot.webhook_active else None
     await session.commit()
     return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url}
 
