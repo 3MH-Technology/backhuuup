@@ -108,23 +108,6 @@ class ContainerManager:
             (work_dir / "requirements.txt").write_text(requirements, encoding="utf-8")
 
     @staticmethod
-    def _write_sitecustomize(work_dir: Path):
-        """DNS fix: force IPv6 — HF Space is IPv6-native."""
-        code = r'''"""sitecustomize.py — runs at Python startup (PYTHONPATH)."""
-import os as _os
-import socket as _socket
-
-# Force IPv6-only DNS resolution — HF Space is IPv6-native, IPv4 to Telegram gets DPI-throttled
-_orig_getaddrinfo = _socket.getaddrinfo
-def _ipv6_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-    return _orig_getaddrinfo(host, port, _socket.AF_INET6, type, proto, flags)
-_socket.getaddrinfo = _ipv6_getaddrinfo
-'''
-        f = work_dir / "sitecustomize.py"
-        f.write_text(code, encoding="utf-8")
-        f.chmod(0o444)
-
-    @staticmethod
     def _write_boot_loader(work_dir: Path):
         """Boot loader — sitecustomize.py handles IPv4, just runs user bot."""
         code = r'''"""_wolf_boot.py — Wolf Host boot loader."""
@@ -187,11 +170,6 @@ with open(_user, "rb") as _f:
                 entry = php_files[0] if php_files else entry
             cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(entry)]
 
-        tg_proxy = "http://127.0.0.1:7860/api/tg"
-
-        # DNS fix: write sitecustomize.py that forces IPv4
-        cls._write_sitecustomize(work_dir)
-
         env = {
             "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
             "LANG": os.environ.get("LANG", "en_US.UTF-8"),
@@ -200,12 +178,6 @@ with open(_user, "rb") as _f:
             "TMPDIR": str(work_dir),
             "PYTHONUNBUFFERED": "1",
             "PORT": str(port),
-            "TG_PROXY": tg_proxy,
-            "TELEGRAM_BOT_API_URL": f"{tg_proxy}/{{0}}/{{1}}",
-            "PYTHONPATH": str(work_dir),
-            "CURL_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
-            "REQUESTS_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
-            "SSL_CERT_FILE": "/etc/ssl/certs/ca-certificates.crt",
         }
 
         try:

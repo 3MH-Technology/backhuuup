@@ -132,6 +132,14 @@
               <label class="block text-sm font-medium text-gray-300 mb-2">توكن التوثيق</label>
               <input type="text" id="webhookToken" readonly class="code-area w-full px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-emerald-400 text-sm font-mono" value="">
             </div>
+            <div id="webhookExternalSection" class="hidden mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+              <p class="text-xs text-amber-400 mb-2">⚠️ HF Space يحظر الاتصال بخوادم تيليجرام. سجّل الويب هوك من خارج المنصة:</p>
+              <div class="bg-gray-900/80 rounded-lg p-3 code-area text-xs text-green-400 text-left" dir="ltr">
+                <span id="curlCommand">curl -X POST "https://api.telegram.org/botTOKEN/setWebhook?url=WEBHOOK_URL"</span>
+              </div>
+              <button onclick="copyCurl()" class="mt-2 text-xs text-amber-400 hover:text-amber-300">نسخ الأمر</button>
+              <p class="text-xs text-gray-500 mt-2">شغّل الأمر من جهازك أو جوالك (مرة واحدة فقط). استخدم <strong class="text-gray-300">@userinfobot</strong> عشان تجيب توكن بوتك.</p>
+            </div>
             <p class="text-xs text-gray-500 mt-2">الرابط فريد وآمن. لا أحد يقدر يخمنه.</p>
           </div>
         </div>
@@ -309,11 +317,20 @@
           const fullToken = data.webhook_token_full || data.webhook_token || '';
           document.getElementById('webhookToken').value = fullToken;
           document.getElementById('webhookTokenSection').classList.remove('hidden');
+          document.getElementById('webhookExternalSection').classList.remove('hidden');
+          // Update the curl command with the actual webhook URL and token
+          const curlEl = document.getElementById('curlCommand');
+          curlEl.textContent = `curl -X POST "https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook?url=${data.webhook_url}"`;
           if (fullToken.length > 16) {
             fullToken && navigator.clipboard?.writeText(fullToken);
           }
         }
       } catch (e) { console.error(e); }
+    }
+
+    function copyCurl() {
+      const el = document.getElementById('curlCommand');
+      navigator.clipboard.writeText(el.textContent);
     }
 
     function copyWebhookUrl() {
