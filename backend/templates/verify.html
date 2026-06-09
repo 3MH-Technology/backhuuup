@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolf Host — توثيق البريد</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Tajawal', system-ui, sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #0a0f1e 0%, #111827 50%, #0a0f1e 100%); }
+    .glass-card { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+    .code-input { width: 50px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; }
+  </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <img src="/static/logo.jpg" class="w-20 h-20 mx-auto rounded-2xl shadow-2xl shadow-blue-500/20 mb-4 object-cover border-2 border-gray-700/50">
+      <h1 class="text-3xl font-black text-white">توثيق البريد الإلكتروني</h1>
+      <p id="infoText" class="text-gray-400 mt-2">تم إرسال كود التحقق إلى بريدك</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-8">
+      <form id="verifyForm" class="space-y-6" onsubmit="return false;">
+        <div class="text-center">
+          <label class="block text-sm font-medium text-gray-300 mb-4">أدخل كود التحقق المكون من 6 أرقام</label>
+          <div class="flex justify-center gap-2" dir="ltr">
+            <input type="text" id="c1" maxlength="1" class="code-input bg-gray-800/50 border border-gray-700/50 rounded-xl text-white focus:border-blue-500 focus:outline-none" oninput="moveNext(this, 'c2')">
+            <input type="text" id="c2" maxlength="1" class="code-input bg-gray-800/50 border border-gray-700/50 rounded-xl text-white focus:border-blue-500 focus:outline-none" oninput="moveNext(this, 'c3')">
+            <input type="text" id="c3" maxlength="1" class="code-input bg-gray-800/50 border border-gray-700/50 rounded-xl text-white focus:border-blue-500 focus:outline-none" oninput="moveNext(this, 'c4')">
+            <input type="text" id="c4" maxlength="1" class="code-input bg-gray-800/50 border border-gray-700/50 rounded-xl text-white focus:border-blue-500 focus:outline-none" oninput="moveNext(this, 'c5')">
+            <input type="text" id="c5" maxlength="1" class="code-input bg-gray-800/50 border border-gray-700/50 rounded-xl text-white focus:border-blue-500 focus:outline-none" oninput="moveNext(this, 'c6')">
+            <input type="text" id="c6" maxlength="1" class="code-input bg-gray-800/50 border border-gray-700/50 rounded-xl text-white focus:border-blue-500 focus:outline-none" oninput="submitCode()">
+          </div>
+        </div>
+
+        <button type="submit" onclick="submitCode()" class="w-full py-3 bg-gradient-to-l from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-blue-500/20">
+          توثيق الحساب
+        </button>
+      </form>
+
+      <div id="errorMsg" class="mt-4 text-red-400 text-sm text-center hidden"></div>
+
+      <p class="mt-6 text-center text-gray-400 text-sm">
+        لم يصلك الكود؟
+        <a href="#" onclick="resendCode()" class="text-blue-400 hover:text-blue-300 font-medium">إعادة إرسال</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email') || localStorage.getItem('verify_email') || '';
+    if (email) document.getElementById('infoText').textContent = `تم إرسال كود التحقق إلى ${email}`;
+
+    function moveNext(el, nextId) {
+      if (el.value.length >= 1) {
+        const next = document.getElementById(nextId);
+        if (next) next.focus();
+      }
+    }
+
+    async function submitCode() {
+      const code = ['c1','c2','c3','c4','c5','c6'].map(id => document.getElementById(id).value).join('');
+      if (code.length !== 6) return;
+      const errEl = document.getElementById('errorMsg');
+      errEl.classList.add('hidden');
+      try {
+        const res = await fetch(`${API}/api/auth/verify`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', data.access_token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.removeItem('verify_email');
+          window.location.href = '/dashboard';
+        } else {
+          errEl.textContent = data.detail || 'كود خاطئ';
+          errEl.classList.remove('hidden');
+        }
+      } catch (e) {
+        errEl.textContent = 'خطأ في الاتصال';
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function resendCode() {
+      if (!email) return;
+      try {
+        await fetch(`${API}/api/auth/send-code`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: '' }),
+        });
+        alert('تم إعادة إرسال الكود');
+      } catch (e) { alert('خطأ'); }
+    }
+  </script>
+</body>
+</html>

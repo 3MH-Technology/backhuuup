@@ -95,7 +95,11 @@
           localStorage.setItem('user', JSON.stringify(data.user));
           window.location.href = '/dashboard';
         } else {
-          errorEl.textContent = data.detail || 'فشل تسجيل الدخول';
+          if (data.detail && data.detail.includes('غير موثق')) {
+            errorEl.innerHTML = 'البريد الإلكتروني غير موثق. <a href="/verify?email=' + encodeURIComponent(email) + '" class="text-blue-400 underline">توثيق الآن</a>';
+          } else {
+            errorEl.textContent = data.detail || 'فشل تسجيل الدخول';
+          }
           errorEl.classList.remove('hidden');
         }
       } catch (err) {

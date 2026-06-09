@@ -46,6 +46,8 @@ async def _add_missing_columns(conn):
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_active BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_messages_today INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_date VARCHAR(20)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(10)",
     ]
     for stmt in migrations:
         try:

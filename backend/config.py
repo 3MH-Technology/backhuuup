@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     backup_git_repo: str = "https://github.com/3MH-Technology/backhuuup.git"
     backup_interval_hours: int = 6
 
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+
     class Config:
         env_file = ".env"
 

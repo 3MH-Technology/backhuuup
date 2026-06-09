@@ -94,9 +94,8 @@
         });
         const data = await res.json();
         if (res.ok) {
-          localStorage.setItem('token', data.access_token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          window.location.href = '/dashboard';
+          localStorage.setItem('verify_email', document.getElementById('email').value);
+          window.location.href = '/verify?email=' + encodeURIComponent(document.getElementById('email').value);
         } else {
           errorEl.textContent = typeof data.detail === 'string' ? data.detail : 'فشل إنشاء الحساب';
           errorEl.classList.remove('hidden');

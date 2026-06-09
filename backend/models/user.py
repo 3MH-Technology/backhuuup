@@ -14,6 +14,9 @@ class User(Base):
     is_active = Column(Integer, default=1)
     device_fingerprint = Column(String(255), nullable=True)
 
+    email_verified = Column(Integer, default=0)
+    verification_code = Column(String(10), nullable=True)
+
     ai_messages_today = Column(Integer, default=0)
     ai_date = Column(String(20), nullable=True)
 
