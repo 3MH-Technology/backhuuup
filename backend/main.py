@@ -34,8 +34,9 @@ WOLF_BANNER = r"""
 ║        🐺 Wolf Host — استضافة الذب هوست           ║
 ║     Autonomous Bot Hosting for Arab Developers   ║
 ║     Developer: الذئب الأبيض 🐺                    ║
-║     Telegram:  @j49_c                            ║
+║     Developer: @j49_c                            ║
 ║     Channel:   @O5O6J                            ║
+║     Support:   @Wolfhost_1                        ║
 ║     X:         https://x.com/wolfhost_1          ║
 ╚══════════════════════════════════════════════════╝
 """

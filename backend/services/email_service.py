@@ -41,7 +41,7 @@ def send_verification(recipient: str, code: str) -> bool:
             </div>
             <p style="color: #6b7280; font-size: 13px; margin: 15px 0 0;">الكود صالح لمدة 10 دقائق. إذا لم تطلب هذا، تجاهل الرسالة.</p>
         </div>
-        <p style="color: #4b5563; font-size: 11px; text-align: center; margin-top: 20px;">Wolf Host — Developer: الذئب الأبيض 🐺 | @j49_c</p>
+        <p style="color: #4b5563; font-size: 11px; text-align: center; margin-top: 20px;">Wolf Host — Developer: الذئب الأبيض 🐺 | @j49_c | Support: @Wolfhost_1</p>
     </div>
     """
 

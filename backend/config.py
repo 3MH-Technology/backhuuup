@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     developer: str = "الذئب الأبيض 🐺"
     developer_telegram: str = "@j49_c"
     channel_telegram: str = "@O5O6J"
+    support_telegram: str = "@Wolfhost_1"
     x_account: str = "https://x.com/wolfhost_1"
 
     database_url: str = "postgresql+asyncpg://user:pass@host:5432/db"
