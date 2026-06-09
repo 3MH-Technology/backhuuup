@@ -3,7 +3,13 @@ import logging
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.database import get_session
+from models.user import User
+from services.auth_service import AuthService
+from services.limiter import limiter
 
 logger = logging.getLogger("wolfhost.backup")
 
@@ -11,7 +17,16 @@ router = APIRouter(prefix="/api/backup", tags=["Backup"])
 
 
 @router.post("/run")
-async def trigger_backup():
+@limiter.limit("1/hour")
+async def trigger_backup(
+    request: Request,
+    user: User = Depends(AuthService.get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    is_admin = getattr(user, "is_admin", False)
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
     script = Path("/app/scripts/db_backup.sh")
     if not script.exists():
         raise HTTPException(status_code=500, detail="Backup script not found")

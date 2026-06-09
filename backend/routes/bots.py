@@ -124,7 +124,9 @@ async def _get_user_bot(bot_id: int, user: User, session: AsyncSession) -> Bot:
 
 
 @router.get("/")
+@limiter.limit("30/minute")
 async def list_bots(
+    request: Request,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -282,7 +284,9 @@ async def create_bot_upload(
 
 
 @router.get("/{bot_id}")
+@limiter.limit("30/minute")
 async def get_bot(
+    request: Request,
     bot_id: int,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -292,7 +296,9 @@ async def get_bot(
 
 
 @router.post("/{bot_id}/start")
+@limiter.limit("10/minute")
 async def start_bot(
+    request: Request,
     bot_id: int,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -319,7 +325,9 @@ async def start_bot(
 
 
 @router.post("/{bot_id}/stop")
+@limiter.limit("10/minute")
 async def stop_bot(
+    request: Request,
     bot_id: int,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -336,7 +344,9 @@ async def stop_bot(
 
 
 @router.post("/{bot_id}/restart")
+@limiter.limit("10/minute")
 async def restart_bot(
+    request: Request,
     bot_id: int,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -366,7 +376,9 @@ async def restart_bot(
 
 
 @router.put("/{bot_id}/code")
+@limiter.limit("10/minute")
 async def update_code(
+    request: Request,
     bot_id: int,
     req: UpdateCodeRequest,
     user: User = Depends(AuthService.get_current_user),
@@ -381,7 +393,9 @@ async def update_code(
 
 
 @router.put("/{bot_id}/webhook")
+@limiter.limit("10/minute")
 async def update_webhook(
+    request: Request,
     bot_id: int,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -400,7 +414,9 @@ async def update_webhook(
 
 
 @router.delete("/{bot_id}")
+@limiter.limit("5/minute")
 async def delete_bot(
+    request: Request,
     bot_id: int,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),

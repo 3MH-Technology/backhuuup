@@ -12,8 +12,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import aiohttp
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from config import settings, BASE_DIR
@@ -22,6 +21,8 @@ from routes import auth_router, bots_router, logs_router, frontend_router, webho
 from services.limiter import limiter
 from services.self_healer import SelfHealer
 from services.container_manager import ContainerManager
+
+MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -149,10 +150,15 @@ app.add_middleware(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://wolf-host.pages.dev",
+        "https://*.hf.space",
+        "http://localhost:7860",
+        "http://127.0.0.1:7860",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Bot-Slug", "X-Webhook-Token"],
 )
 
 
@@ -178,6 +184,18 @@ async def bot_proxy(request: Request, path: str):
 
 
 @app.middleware("http")
+async def body_size_limit(request: Request, call_next):
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > MAX_BODY_SIZE:
+        return JSONResponse({"detail": "Request body too large"}, status_code=413)
+    if request.method in ("POST", "PUT", "PATCH"):
+        body = await request.body()
+        if len(body) > MAX_BODY_SIZE:
+            return JSONResponse({"detail": "Request body too large"}, status_code=413)
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -185,6 +203,8 @@ async def security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self)"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://wolf-host.pages.dev https://*.hf.space; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 

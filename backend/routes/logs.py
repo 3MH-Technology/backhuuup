@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -7,13 +7,16 @@ from models.bot import Bot
 from models.user import User
 from services.auth_service import AuthService
 from services.container_manager import ContainerManager
+from services.limiter import limiter
 from services.log_streamer import LogStreamer
 
 router = APIRouter(prefix="/api/logs", tags=["Logs"])
 
 
 @router.get("/{bot_id}")
+@limiter.limit("30/minute")
 async def get_logs(
+    request: Request,
     bot_id: int,
     lines: int = Query(default=50, le=500),
     user: User = Depends(AuthService.get_current_user),
