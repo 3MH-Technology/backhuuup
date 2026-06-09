@@ -9,6 +9,7 @@ from sqlalchemy import select
 from models.database import async_session
 from models.bot import Bot
 from services.container_manager import ContainerManager
+from services.limiter import limiter
 
 logger = logging.getLogger("wolfhost.webhook")
 
@@ -27,6 +28,7 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
 
 
 @router.api_route("/{token}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+@limiter.limit("120/minute")
 async def proxy_webhook_token(request: Request, token: str):
     async with async_session() as session:
         result = await session.execute(select(Bot).where(Bot.webhook_token == token))
@@ -37,6 +39,7 @@ async def proxy_webhook_token(request: Request, token: str):
 
 
 @router.api_route("/", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+@limiter.limit("120/minute")
 async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default="", alias="X-Bot-Slug"), x_webhook_token: str = Header(default="", alias="X-Webhook-Token")):
     token = x_webhook_token.strip() or x_bot_slug.strip()
     if not token:
@@ -50,6 +53,7 @@ async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default=
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+@limiter.limit("120/minute")
 async def proxy_webhook_legacy(request: Request, path: str):
     return await proxy_webhook_root(request, "", "")
 
@@ -109,6 +113,6 @@ async def _stream(request: Request, target_url: str, slug: str):
             yield b'{"ok":false,"error":"Bot unreachable"}'
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning(f"Webhook proxy failed for {slug}: {e}")
-            yield f'{{"ok":false,"error":"{e}"}}'.encode()
+            yield b'{"ok":false,"error":"Proxy upstream error"}'
 
     return StreamingResponse(stream_response(), media_type="application/json")

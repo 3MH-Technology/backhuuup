@@ -144,15 +144,11 @@
           <h3 class="text-lg font-bold text-white mb-4">🌐 بروكسي تيليجرام</h3>
           <p class="text-sm text-gray-400 mb-3">HF Space يحظر الاتصال بـ api.telegram.org. استخدم البروكسي المدمج:</p>
           <div class="bg-gray-900/80 rounded-xl p-4 code-area text-sm text-green-400" dir="ltr" style="text-align:left">
-import telebot<br>
-import os<br>
+# ✅ المشكلة محلولة تلقائياً — ما يحتاج أي تعديل<br>
+# Wolf Host يطبق DNS fix (IPv4 فقط) وبروكسي API تلقائياً<br>
 <br>
+import telebot<br>
 bot = telebot.TeleBot("TOKEN")<br>
-# استخدم البروكسي المدمج:<br>
-proxy = os.environ.get("TG_PROXY", "")<br>
-if proxy:<br>
-&nbsp;&nbsp;from telebot import apihelper<br>
-&nbsp;&nbsp;apihelper.API_URL = proxy + "/{token}/{method}"<br>
 <br>
 @bot.message_handler(commands=['start'])<br>
 def start(msg):<br>
@@ -160,7 +156,7 @@ def start(msg):<br>
 <br>
 bot.polling()
           </div>
-          <p class="text-xs text-gray-500 mt-3">أو استخدم <strong class="text-blue-400">Webhook</strong> بدل Polling عشان ما يحتاج اتصال صادر.</p>
+          <p class="text-xs text-gray-500 mt-3">✅ <strong class="text-green-400">DNS fix + بروكسي تلقائي</strong> الآن — اكتب كودك بشكل طبيعي، المنصة تهتم بالباقي.</p>
         </div>
         <div class="card p-5">
           <h3 class="text-lg font-bold text-white mb-2">🐺 الترويج</h3>
@@ -342,8 +338,12 @@ bot.polling()
         document.getElementById('webhookUrlSection').classList.toggle('hidden', !data.webhook_active);
         if (data.webhook_active) {
           document.getElementById('webhookUrl').value = data.webhook_url;
-          document.getElementById('webhookToken').value = data.webhook_token || '—';
+          const fullToken = data.webhook_token_full || data.webhook_token || '';
+          document.getElementById('webhookToken').value = fullToken;
           document.getElementById('webhookTokenSection').classList.remove('hidden');
+          if (fullToken.length > 16) {
+            fullToken && navigator.clipboard?.writeText(fullToken);
+          }
         }
       } catch (e) { console.error(e); }
     }

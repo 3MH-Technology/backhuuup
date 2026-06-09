@@ -95,6 +95,12 @@ def _is_expired(bot: Bot) -> bool:
     return datetime.now(timezone.utc) > bot.expires_at
 
 
+def _mask_token(token: str | None) -> str | None:
+    if not token or len(token) < 8:
+        return token
+    return token[:4] + "…" + token[-4:]
+
+
 def _bot_to_dict(bot: Bot) -> dict:
     usage = ContainerManager.get_resource_usage(bot.container_id) if bot.container_id else {"cpu": 0, "memory_mb": 0}
     return {
@@ -108,7 +114,7 @@ def _bot_to_dict(bot: Bot) -> dict:
         "requirements": bot.requirements,
         "is_upload": bot.is_upload or False,
         "upload_path": bot.upload_path,
-        "webhook_token": bot.webhook_token,
+        "webhook_token": _mask_token(bot.webhook_token),
         "webhook_url": f"https://wolf-host.pages.dev/api/webhook/{bot.webhook_token}" if bot.webhook_active else None,
         "webhook_active": bot.webhook_active or False,
         "restart_count": bot.restart_count,
@@ -149,7 +155,7 @@ async def list_bots(
             "status": ContainerManager.get_status(b.container_id) if b.container_id else b.status,
             "is_upload": b.is_upload or False,
             "webhook_active": b.webhook_active or False,
-            "webhook_token": b.webhook_token,
+            "webhook_token": _mask_token(b.webhook_token),
             "created_at": b.created_at.isoformat() if b.created_at else None,
             "expires_at": b.expires_at.isoformat() if b.expires_at else None,
             "expired": _is_expired(b),
@@ -262,7 +268,10 @@ async def create_bot_upload(
             expires_at=datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS),
         )
     else:
-        bot_file_path = work_dir / slug / file.filename
+        safe_filename = Path(file.filename).name
+        if ".." in safe_filename or "/" in safe_filename or "\\" in safe_filename:
+            raise HTTPException(status_code=400, detail="اسم ملف غير صالح")
+        bot_file_path = work_dir / slug / safe_filename
         bot_file_path.parent.mkdir(parents=True, exist_ok=True)
         bot_file_path.write_bytes(contents)
         bot = Bot(
@@ -414,7 +423,7 @@ async def update_webhook(
     else:
         bot.webhook_url = None
     await session.commit()
-    return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url, "webhook_token": bot.webhook_token}
+    return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url, "webhook_token_full": bot.webhook_token}
 
 
 @router.delete("/{bot_id}")

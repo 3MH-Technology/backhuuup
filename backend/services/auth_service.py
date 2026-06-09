@@ -3,7 +3,7 @@ from typing import Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -45,11 +45,26 @@ class AuthService:
     async def authenticate(username: str, password: str, session: AsyncSession) -> dict:
         result = await session.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
-        if not user or not verify_password(password, user.hashed_password):
+        if not user:
             raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور خطأ")
-        is_admin = getattr(user, "is_admin", False)
-        token = create_access_token({"sub": str(user.id), "username": user.username, "is_admin": is_admin})
-        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "username": user.username, "is_admin": is_admin}}
+
+        now = datetime.now(timezone.utc)
+        if user.locked_until and now < user.locked_until:
+            remaining = int((user.locked_until - now).total_seconds())
+            raise HTTPException(status_code=429, detail=f"الحساب مقفل. حاول بعد {remaining} ثانية.")
+
+        if not verify_password(password, user.hashed_password):
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= 5:
+                user.locked_until = now + timedelta(minutes=15)
+            await session.commit()
+            raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور خطأ")
+
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        await session.commit()
+        token = create_access_token({"sub": str(user.id), "username": user.username})
+        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "username": user.username, "is_admin": bool(getattr(user, "is_admin", False))}}
 
     @staticmethod
     async def register(username: str, password: str, device_fingerprint: str, session: AsyncSession) -> dict:
@@ -71,15 +86,14 @@ class AuthService:
         await session.commit()
         await session.refresh(user)
 
-        is_admin = getattr(user, "is_admin", False)
-        token = create_access_token({"sub": str(user.id), "username": user.username, "is_admin": is_admin})
+        token = create_access_token({"sub": str(user.id), "username": user.username})
         return {
             "access_token": token, "token_type": "bearer",
-            "user": {"id": user.id, "username": user.username, "is_admin": is_admin},
+            "user": {"id": user.id, "username": user.username, "is_admin": False},
         }
 
     @staticmethod
-    async def forgot_password(username: str, session: AsyncSession) -> dict:
+    async def forgot_password(username: str, request: Request, session: AsyncSession) -> dict:
         result = await session.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
         if not user:
@@ -91,6 +105,7 @@ class AuthService:
             user.reset_attempts_today = 0
             user.reset_code = None
             user.reset_cooldown_until = None
+            user.reset_code_expires_at = None
 
         if user.reset_attempts_today >= 3:
             raise HTTPException(status_code=429, detail="لقد استنفذت محاولاتك اليومية (3 محاولات). حاول بكرة.")
@@ -105,14 +120,36 @@ class AuthService:
 
         code = generate_code()
         user.reset_code = code
+        user.reset_code_expires_at = now + timedelta(minutes=5)
+        user.reset_code_ip = request.client.host if request.client else None
         user.reset_attempts_today = level + 1
         user.reset_cooldown_until = now + timedelta(seconds=cooldowns[min(level, len(cooldowns) - 1)])
         await session.commit()
 
-        return {"message": "كود إعادة التعيين", "reset_code": code}
+        return {"message": "تم إرسال كود إعادة التعيين. الكود صالح لمدة 5 دقائق."}
 
     @staticmethod
-    async def reset_password(username: str, code: str, new_password: str, session: AsyncSession) -> dict:
+    async def get_reset_code(username: str, request: Request, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.username == username))
+        user = result.scalar_one_or_none()
+        if not user or not user.reset_code:
+            raise HTTPException(status_code=404, detail="لم يتم طلب كود إعادة تعيين")
+
+        now = datetime.now(timezone.utc)
+        if user.reset_code_expires_at and now > user.reset_code_expires_at:
+            user.reset_code = None
+            user.reset_code_expires_at = None
+            await session.commit()
+            raise HTTPException(status_code=400, detail="انتهت صلاحية الكود. أعد المحاولة.")
+
+        client_ip = request.client.host if request.client else None
+        if user.reset_code_ip and client_ip and user.reset_code_ip != client_ip:
+            raise HTTPException(status_code=403, detail="الكود صالح فقط من نفس عنوان IP الذي طلبه.")
+
+        return {"reset_code": user.reset_code}
+
+    @staticmethod
+    async def reset_password(username: str, code: str, new_password: str, request: Request, session: AsyncSession) -> dict:
         result = await session.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
         if not user:
@@ -120,11 +157,22 @@ class AuthService:
         if user.reset_code is None or user.reset_code != code:
             raise HTTPException(status_code=400, detail="كود خاطئ أو منتهي الصلاحية")
 
+        if user.reset_code_expires_at and datetime.now(timezone.utc) > user.reset_code_expires_at:
+            user.reset_code = None
+            user.reset_code_expires_at = None
+            await session.commit()
+            raise HTTPException(status_code=400, detail="انتهت صلاحية الكود. أعد المحاولة.")
+
+        client_ip = request.client.host if request.client else None
+        if user.reset_code_ip and client_ip and user.reset_code_ip != client_ip:
+            raise HTTPException(status_code=403, detail="الكود صالح فقط من نفس عنوان IP الذي طلبه.")
+
         if len(new_password) < 8 or not any(c.isupper() for c in new_password) or not any(c.islower() for c in new_password) or not any(c.isdigit() for c in new_password):
             raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل، تحتوي على حرف كبير، حرف صغير، ورقم")
 
         user.hashed_password = get_password_hash(new_password)
         user.reset_code = None
+        user.reset_code_expires_at = None
         user.reset_cooldown_until = None
         await session.commit()
         return {"message": "تم تغيير كلمة المرور بنجاح. سجل دخول الآن."}
@@ -135,7 +183,10 @@ class AuthService:
         session: AsyncSession = Depends(get_session),
     ) -> User:
         payload = verify_token(credentials.credentials)
-        user_id = int(payload.get("sub"))
+        sub = payload.get("sub")
+        if not sub:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user_id = int(sub)
         result = await session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user:

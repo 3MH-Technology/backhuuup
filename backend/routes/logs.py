@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from models.database import get_session
+from models.database import async_session, get_session
 from models.bot import Bot
 from models.user import User
 from services.auth_service import AuthService
@@ -45,7 +45,7 @@ async def stream_logs(websocket: WebSocket, bot_id: int):
         await websocket.close(code=4001)
         return
 
-    async with get_session() as session:
+    async with async_session() as session:
         result = await session.execute(
             select(Bot).where(Bot.id == bot_id, Bot.user_id == user_id)
         )

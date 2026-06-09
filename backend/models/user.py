@@ -18,6 +18,10 @@ class User(Base):
     reset_date = Column(String(20), nullable=True)
     reset_attempts_today = Column(Integer, default=0)
     reset_cooldown_until = Column(DateTime(timezone=True), nullable=True)
+    reset_code_expires_at = Column(DateTime(timezone=True), nullable=True)
+    reset_code_ip = Column(String(45), nullable=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
 
     ai_messages_today = Column(Integer, default=0)
     ai_date = Column(String(20), nullable=True)

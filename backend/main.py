@@ -136,7 +136,13 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"],
+    allowed_hosts=[
+        "wolf-host.pages.dev",
+        "localhost",
+        "127.0.0.1",
+        "*.hf.space",
+        ".hf.space",
+    ],
 )
 
 app.add_middleware(

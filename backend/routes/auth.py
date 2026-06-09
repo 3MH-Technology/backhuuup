@@ -59,16 +59,23 @@ async def register(request: Request, req: RegisterRequest, session: AsyncSession
 @router.post("/forgot-password")
 @limiter.limit("3/hour")
 async def forgot_password(request: Request, req: ForgotPasswordRequest, session: AsyncSession = Depends(get_session)):
-    return await AuthService.forgot_password(req.username, session)
+    return await AuthService.forgot_password(req.username, request, session)
+
+
+@router.get("/reset-code/{username}")
+@limiter.limit("10/minute")
+async def get_reset_code(request: Request, username: str, session: AsyncSession = Depends(get_session)):
+    return await AuthService.get_reset_code(username, request, session)
 
 
 @router.post("/reset-password")
 @limiter.limit("5/minute")
 async def reset_password(request: Request, req: ResetPasswordRequest, session: AsyncSession = Depends(get_session)):
-    return await AuthService.reset_password(req.username, req.code, req.new_password, session)
+    return await AuthService.reset_password(req.username, req.code, req.new_password, request, session)
 
 
 @router.get("/me")
-async def me(user=Depends(AuthService.get_current_user)):
+async def me(session: AsyncSession = Depends(get_session), user=Depends(AuthService.get_current_user)):
+    await session.refresh(user)
     is_admin = getattr(user, "is_admin", False)
     return {"id": user.id, "username": user.username, "is_admin": is_admin}

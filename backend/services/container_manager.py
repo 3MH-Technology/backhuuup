@@ -28,12 +28,23 @@ MAX_ZIP_SIZE = 10 * 1024 * 1024
 
 class ContainerManager:
     _instances: dict[str, dict] = {}
-    _port_allocator = iter(range(9000, 10000))
+    _port_pool: set[int] = set(range(9000, 10000))
     _resource_cache: dict[str, dict] = {}
+    _port_lock = asyncio.Lock()
 
     @staticmethod
-    def _allocate_port() -> int:
-        return next(ContainerManager._port_allocator)
+    async def _allocate_port() -> int:
+        async with ContainerManager._port_lock:
+            if not ContainerManager._port_pool:
+                raise RuntimeError("No available ports")
+            port = min(ContainerManager._port_pool)
+            ContainerManager._port_pool.remove(port)
+            return port
+
+    @staticmethod
+    def _release_port(port: int):
+        if 9000 <= port <= 9999:
+            ContainerManager._port_pool.add(port)
 
     @staticmethod
     def get_bot_port(container_id: str) -> int | None:
@@ -96,6 +107,53 @@ class ContainerManager:
         if requirements.strip():
             (work_dir / "requirements.txt").write_text(requirements, encoding="utf-8")
 
+    @staticmethod
+    def _write_sitecustomize(work_dir: Path):
+        """DNS fix: force IPv4 + auto-configure Telegram proxy."""
+        code = r'''"""sitecustomize.py — runs at Python startup (PYTHONPATH)."""
+import os as _os
+import socket as _socket
+
+# Force IPv4-only DNS resolution (fixes SSL/Cannot allocate memory on HF Spaces)
+_orig_getaddrinfo = _socket.getaddrinfo
+def _ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_getaddrinfo(host, port, _socket.AF_INET, type, proto, flags)
+_socket.getaddrinfo = _ipv4_getaddrinfo
+'''
+        f = work_dir / "sitecustomize.py"
+        f.write_text(code, encoding="utf-8")
+        f.chmod(0o444)
+
+    @staticmethod
+    def _write_boot_loader(work_dir: Path):
+        """Boot loader — forces IPv4 + patches telebot proxy automatically."""
+        code = r'''"""_wolf_boot.py — Wolf Host boot loader."""
+import os as _os, sys as _sys
+
+# ── automatic telebot proxy ──
+_tg_api_url = _os.environ.get("TELEGRAM_BOT_API_URL", "")
+if _tg_api_url:
+    _orig_import = __builtins__.__import__ if isinstance(__builtins__, dict) else __builtins__.__import__
+    def _hook(name, *a, **kw):
+        mod = _orig_import(name, *a, **kw)
+        if name in ("telebot", "telebot.apihelper"):
+            try:
+                (mod if name == "telebot.apihelper" else mod.apihelper).API_URL = _tg_api_url
+            except Exception:
+                pass
+        return mod
+    (__builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__)["__import__"] = _hook
+
+# ── run user bot ──
+_user = _sys.argv[1] if len(_sys.argv) > 1 else "bot.py"
+_sys.argv = [_user] + _sys.argv[2:]
+with open(_user, "rb") as _f:
+    exec(compile(_f.read(), _user, "exec"), {"__name__": "__main__", "__file__": _user})
+'''
+        f = work_dir / "_wolf_boot.py"
+        f.write_text(code, encoding="utf-8")
+        f.chmod(0o444)
+
     @classmethod
     async def start_bot(cls, bot_id: int, user_id: int, slug: str,
                         bot_type: str, main_file_content: str = "",
@@ -111,7 +169,7 @@ class ContainerManager:
         log_file = work_dir / "bot.log"
         log_fh = open(log_file, "w", encoding="utf-8")
 
-        port = cls._allocate_port()
+        port = await cls._allocate_port()
 
         if bot_type == "python":
             req_file = work_dir / "requirements.txt"
@@ -126,11 +184,12 @@ class ContainerManager:
                         capture_output=True, timeout=120,
                     ),
                 )
+            cls._write_boot_loader(work_dir)
             entry = work_dir / "bot.py"
             if not entry.exists():
-                py_files = list(work_dir.glob("*.py"))
+                py_files = [f for f in work_dir.glob("*.py") if f.name != "_wolf_boot.py"]
                 entry = py_files[0] if py_files else entry
-            cmd = [sys.executable, "-u", str(entry)]
+            cmd = [sys.executable, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
         else:
             entry = work_dir / "index.php"
             if not entry.exists():
@@ -138,15 +197,25 @@ class ContainerManager:
                 entry = php_files[0] if php_files else entry
             cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(entry)]
 
-        safe_env = {k: v for k, v in os.environ.items()
-                     if not k.startswith(("SECRET_", "JWT_", "HF_", "HUGGING_", "SMTP_", "DB_"))}
+        tg_proxy = "http://127.0.0.1:7860/api/tg"
+
+        # DNS fix: write sitecustomize.py that forces IPv4
+        cls._write_sitecustomize(work_dir)
+
         env = {
-            **safe_env,
-            "PYTHONUNBUFFERED": "1",
+            "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+            "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+            "LC_ALL": os.environ.get("LC_ALL", "en_US.UTF-8"),
             "HOME": str(work_dir),
             "TMPDIR": str(work_dir),
+            "PYTHONUNBUFFERED": "1",
             "PORT": str(port),
-            "TG_PROXY": "http://127.0.0.1:7860/api/tg",
+            "TG_PROXY": tg_proxy,
+            "TELEGRAM_BOT_API_URL": f"{tg_proxy}/{{0}}/{{1}}",
+            "PYTHONPATH": str(work_dir),
+            "CURL_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
+            "REQUESTS_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
+            "SSL_CERT_FILE": "/etc/ssl/certs/ca-certificates.crt",
         }
 
         try:
@@ -210,11 +279,14 @@ class ContainerManager:
         except (psutil.NoSuchProcess, ProcessLookupError):
             pass
 
+        port = instance.get("port")
         if instance.get("log_fh"):
             instance["log_fh"].close()
         cls._instances.pop(container_id, None)
         cls._resource_cache.pop(container_id, None)
-        logger.info(f"Bot {container_id} stopped")
+        if port:
+            cls._release_port(port)
+        logger.info(f"Bot {container_id} stopped (port {port} released)")
         return {"status": "success", "message": "Bot stopped"}
 
     @classmethod
