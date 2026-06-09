@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import smtplib
 from email.mime.text import MIMEText
@@ -12,8 +13,18 @@ def generate_code() -> str:
     return str(random.randint(100000, 999999))
 
 
+def _get_smtp_credential(key: str) -> str:
+    val = getattr(settings, key, "")
+    if not val:
+        env_key = key.upper()
+        val = os.environ.get(env_key, "")
+    return val
+
+
 def send_verification(recipient: str, code: str) -> bool:
-    if not settings.smtp_user or not settings.smtp_password:
+    smtp_user = _get_smtp_credential("smtp_user")
+    smtp_password = _get_smtp_credential("smtp_password")
+    if not smtp_user or not smtp_password:
         logger.warning("SMTP not configured — skipping email send")
         return False
 
@@ -36,13 +47,13 @@ def send_verification(recipient: str, code: str) -> bool:
 
     msg = MIMEText(body, "html", "utf-8")
     msg["Subject"] = "🐺 Wolf Host — كود التحقق"
-    msg["From"] = settings.smtp_user
+    msg["From"] = smtp_user
     msg["To"] = recipient
 
     try:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
             server.starttls()
-            server.login(settings.smtp_user, settings.smtp_password)
+            server.login(smtp_user, smtp_password)
             server.send_message(msg)
         logger.info(f"Verification email sent to {recipient}")
         return True
