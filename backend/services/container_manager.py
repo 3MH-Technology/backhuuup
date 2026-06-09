@@ -205,7 +205,7 @@ with open(_user, "rb") as _f:
             if not entry.exists():
                 php_files = list(work_dir.glob("*.php"))
                 entry = php_files[0] if php_files else entry
-            cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(entry)]
+            cmd = ["php", "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
 
         cf_proxy = os.environ.get("CF_PROXY", "")
         env = {
