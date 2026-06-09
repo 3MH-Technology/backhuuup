@@ -329,6 +329,8 @@
       } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
     }
 
+    function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+
     async function loadBots() {
       try {
         const res = await fetch(`${API}/api/bots/`, { headers: getHeaders() });
@@ -353,7 +355,7 @@
               </div>
               <span class="status-dot ${bot.status}"></span>
             </div>
-            <h3 class="font-bold text-white mb-1">${bot.name}</h3>
+            <h3 class="font-bold text-white mb-1">${escapeHtml(bot.name)}</h3>
             <div class="flex flex-wrap items-center gap-2 text-xs">
               <span class="${bot.status === 'running' ? 'text-emerald-400' : bot.status === 'crashed' ? 'text-red-400' : 'text-gray-500'}">${bot.status === 'running' ? 'يعمل' : bot.status === 'crashed' ? 'معطل' : 'متوقف'}</span>
               ${bot.webhook_active ? '<span class="text-blue-400">Webhook</span>' : ''}
