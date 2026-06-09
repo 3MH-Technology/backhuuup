@@ -11,7 +11,7 @@ from sqlalchemy import select
 from config import settings
 from models.database import get_session
 from models.user import User
-from services.email_service import generate_code, send_verification
+from services.email_service import generate_code
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security_scheme = HTTPBearer()
@@ -42,86 +42,48 @@ def verify_token(token: str) -> dict:
 
 class AuthService:
     @staticmethod
-    async def authenticate(email: str, password: str, session: AsyncSession) -> dict:
-        result = await session.execute(select(User).where(User.email == email))
+    async def authenticate(username: str, password: str, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
         if not user or not verify_password(password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        token = create_access_token({"sub": str(user.id), "email": user.email})
-        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "username": user.username}}
+            raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور خطأ")
+        is_admin = getattr(user, "is_admin", False)
+        token = create_access_token({"sub": str(user.id), "username": user.username, "is_admin": is_admin})
+        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "username": user.username, "is_admin": is_admin}}
 
     @staticmethod
-    async def register(username: str, email: str, password: str, device_fingerprint: str, session: AsyncSession) -> dict:
-        existing = await session.execute(select(User).where((User.email == email) | (User.username == username)))
+    async def register(username: str, password: str, device_fingerprint: str, session: AsyncSession) -> dict:
+        existing = await session.execute(select(User).where(User.username == username))
         if existing.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Email or username already registered")
+            raise HTTPException(status_code=400, detail="اسم المستخدم موجود مسبقاً")
 
         if device_fingerprint:
             existing_device = await session.execute(select(User).where(User.device_fingerprint == device_fingerprint))
             if existing_device.scalar_one_or_none():
                 raise HTTPException(status_code=403, detail="هذا الجهاز مسجل بحساب آخر. حساب واحد لكل جهاز.")
 
-        code = generate_code()
         user = User(
-            username=username, email=email,
+            username=username,
             hashed_password=get_password_hash(password),
             device_fingerprint=device_fingerprint or None,
-            email_verified=1,
-            verification_code=code,
         )
         session.add(user)
         await session.commit()
         await session.refresh(user)
 
-        send_verification(email, code)
+        is_admin = getattr(user, "is_admin", False)
+        token = create_access_token({"sub": str(user.id), "username": user.username, "is_admin": is_admin})
         return {
-            "message": "تم إنشاء الحساب بنجاح!",
-            "email_sent": False,
-            "user_id": user.id,
-            "verification_code": code,
+            "access_token": token, "token_type": "bearer",
+            "user": {"id": user.id, "username": user.username, "is_admin": is_admin},
         }
 
     @staticmethod
-    async def send_code(email: str, session: AsyncSession) -> dict:
-        result = await session.execute(select(User).where(User.email == email))
+    async def forgot_password(username: str, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
         if not user:
-            raise HTTPException(status_code=404, detail="البريد غير مسجل")
-        if user.email_verified:
-            return {"message": "البريد موثق بالفعل"}
-
-        code = generate_code()
-        user.verification_code = code
-        await session.commit()
-        sent = send_verification(email, code)
-        if not sent:
-            raise HTTPException(status_code=500, detail="فشل إرسال البريد. تحقق من إعدادات SMTP.")
-        return {"message": "تم إرسال الكود"}
-
-    @staticmethod
-    async def verify_email(email: str, code: str, session: AsyncSession) -> dict:
-        result = await session.execute(select(User).where(User.email == email))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="البريد غير مسجل")
-        if user.email_verified:
-            return {"message": "موثق بالفعل"}
-        if user.verification_code != code:
-            raise HTTPException(status_code=400, detail="كود خاطئ")
-
-        user.email_verified = 1
-        user.verification_code = None
-        await session.commit()
-
-        token = create_access_token({"sub": str(user.id), "email": user.email})
-        return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "username": user.username}}
-
-    @staticmethod
-    async def forgot_password(email: str, username: str, session: AsyncSession) -> dict:
-        result = await session.execute(select(User).where(User.email == email, User.username == username))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="البريد أو اسم المستخدم غير صحيح")
+            raise HTTPException(status_code=404, detail="اسم المستخدم غير صحيح")
 
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         if user.reset_date != today:
@@ -147,15 +109,14 @@ class AuthService:
         user.reset_cooldown_until = now + timedelta(seconds=cooldowns[min(level, len(cooldowns) - 1)])
         await session.commit()
 
-        send_verification(email, code)
         return {"message": "كود إعادة التعيين", "reset_code": code}
 
     @staticmethod
-    async def reset_password(email: str, code: str, new_password: str, session: AsyncSession) -> dict:
-        result = await session.execute(select(User).where(User.email == email))
+    async def reset_password(username: str, code: str, new_password: str, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
         if not user:
-            raise HTTPException(status_code=404, detail="البريد غير مسجل")
+            raise HTTPException(status_code=404, detail="اسم المستخدم غير موجود")
         if user.reset_code is None or user.reset_code != code:
             raise HTTPException(status_code=400, detail="كود خاطئ أو منتهي الصلاحية")
 

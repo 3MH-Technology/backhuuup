@@ -116,6 +116,18 @@ def _bot_to_dict(bot: Bot) -> dict:
     }
 
 
+async def _get_user_bot(bot_id: int, user: User, session: AsyncSession) -> Bot:
+    is_admin = getattr(user, "is_admin", False)
+    if is_admin:
+        result = await session.execute(select(Bot).where(Bot.id == bot_id))
+    else:
+        result = await session.execute(select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id))
+    bot = result.scalar_one_or_none()
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    return bot
+
+
 @router.get("/")
 async def list_bots(
     user: User = Depends(AuthService.get_current_user),
@@ -150,14 +162,16 @@ async def create_bot_code(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    count_result = await session.execute(
-        select(func.count()).select_from(Bot).where(Bot.user_id == user.id)
-    )
-    if count_result.scalar() >= settings.max_bots_per_user:
-        raise HTTPException(
-            status_code=429,
-            detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
+    is_admin = getattr(user, "is_admin", False)
+    if not is_admin:
+        count_result = await session.execute(
+            select(func.count()).select_from(Bot).where(Bot.user_id == user.id)
         )
+        if count_result.scalar() >= settings.max_bots_per_user:
+            raise HTTPException(
+                status_code=429,
+                detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
+            )
 
     base_slug = _slugify(req.name)
     slug = await _unique_slug(session, base_slug, user.id)
@@ -196,14 +210,16 @@ async def create_bot_upload(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    count_result = await session.execute(
-        select(func.count()).select_from(Bot).where(Bot.user_id == user.id)
-    )
-    if count_result.scalar() >= settings.max_bots_per_user:
-        raise HTTPException(
-            status_code=429,
-            detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
+    is_admin = getattr(user, "is_admin", False)
+    if not is_admin:
+        count_result = await session.execute(
+            select(func.count()).select_from(Bot).where(Bot.user_id == user.id)
         )
+        if count_result.scalar() >= settings.max_bots_per_user:
+            raise HTTPException(
+                status_code=429,
+                detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
+            )
 
     if not _allowed_file(file.filename):
         raise HTTPException(status_code=400, detail="الامتداد غير مسموح. فقط .py, .php, .zip")
@@ -276,12 +292,7 @@ async def get_bot(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
     return _bot_to_dict(bot)
 
 
@@ -291,12 +302,7 @@ async def start_bot(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     if _is_expired(bot):
         bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
@@ -326,12 +332,7 @@ async def stop_bot(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     outcome = await ContainerManager.stop_bot(bot.container_id)
     if outcome["status"] == "success":
@@ -348,12 +349,7 @@ async def restart_bot(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     if _is_expired(bot):
         bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
@@ -387,12 +383,7 @@ async def update_code(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     bot.main_file = req.main_file
     bot.requirements = req.requirements
@@ -406,12 +397,7 @@ async def update_webhook(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     if _is_expired(bot):
         bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
@@ -428,12 +414,7 @@ async def delete_bot(
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     if bot.container_id:
         await ContainerManager.stop_bot(bot.container_id)
@@ -459,12 +440,7 @@ async def renew_bot(
     if not CaptchaService.verify(req.captcha_id, req.answer):
         raise HTTPException(status_code=400, detail="إجابة الكابتشا خاطئة")
 
-    result = await session.execute(
-        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
-    )
-    bot = result.scalar_one_or_none()
-    if not bot:
-        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = await _get_user_bot(bot_id, user, session)
 
     bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
     await session.commit()

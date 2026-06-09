@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import subprocess
 import time
 from contextlib import asynccontextmanager
@@ -15,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from config import settings, BASE_DIR
-from models.database import init_db
+from models.database import init_db, async_session
 from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router, ai_router
 from services.limiter import limiter
 from services.self_healer import SelfHealer
@@ -46,6 +47,28 @@ async def lifespan(app: FastAPI):
 
     await init_db()
     logger.info("✅ Database initialised (PostgreSQL external)")
+
+    admin_user = os.environ.get("CREATE_ADMIN_USERNAME", "").strip()
+    admin_pass = os.environ.get("CREATE_ADMIN_PASSWORD", "").strip()
+    if admin_user and admin_pass:
+        from services.auth_service import get_password_hash
+        from models.user import User
+        from sqlalchemy import select
+        async with async_session() as session:
+            existing = await session.execute(select(User).where(User.username == admin_user))
+            if not existing.scalar_one_or_none():
+                user = User(
+                    username=admin_user,
+                    hashed_password=get_password_hash(admin_pass),
+                    is_admin=True,
+                    device_fingerprint=None,
+                )
+                session.add(user)
+                await session.commit()
+                logger.info(f"✅ Admin account '{admin_user}' created via env vars")
+            else:
+                logger.info(f"ℹ️ Admin '{admin_user}' already exists")
+            await session.close()
 
     await SelfHealer.recover_running_bots()
     await ContainerManager.cleanup_stale()

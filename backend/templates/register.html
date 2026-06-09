@@ -25,11 +25,7 @@
       <form id="registerForm" class="space-y-5">
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">اسم المستخدم</label>
-          <input type="text" id="username" required class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none" placeholder="m7md">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">البريد الإلكتروني</label>
-          <input type="email" id="email" required class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none" placeholder="m@example.com">
+          <input type="text" id="username" required class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none" placeholder="اسم المستخدم">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">كلمة المرور</label>
@@ -87,15 +83,15 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             username: document.getElementById('username').value,
-            email: document.getElementById('email').value,
             password: document.getElementById('password').value,
             device_fingerprint: getDeviceFingerprint(),
           }),
         });
         const data = await res.json();
         if (res.ok) {
-          alert('تم إنشاء الحساب! سجل دخول الآن.');
-          window.location.href = '/login';
+          localStorage.setItem('token', data.access_token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          window.location.href = '/dashboard';
         } else {
           errorEl.textContent = typeof data.detail === 'string' ? data.detail : 'فشل إنشاء الحساب';
           errorEl.classList.remove('hidden');
