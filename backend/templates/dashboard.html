@@ -119,7 +119,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">الكود</label>
-              <textarea id="pyCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="# 🐺 Webhook mode (لا يحتاج اتصال صادر)&#10;import telebot, os, json, http.server&#10;TOKEN = 'YOUR_TOKEN'&#10;bot = telebot.TeleBot(TOKEN)&#10;@bot.message_handler(commands=['start'])&#10;def start(msg):&#10;    bot.reply_to(msg, 'مرحباً!')&#10;class H(http.server.BaseHTTPRequestHandler):&#10;    def do_POST(self):&#10;        bot.process_new_updates([telebot.types.Update.de_json(json.loads(self.rfile.read(int(self.headers['Content-Length'])))))&#10;        self.send_response(200); self.end_headers()&#10;http.server.HTTPServer(('0.0.0.0',int(os.environ.get('PORT',8080))),H).serve_forever()"></textarea>
+              <textarea id="pyCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="# كود البوت هنا...&#10;import telebot&#10;bot = telebot.TeleBot('TOKEN')&#10;@bot.message_handler(commands=['start'])&#10;def start(msg):&#10;    bot.reply_to(msg, 'مرحباً!')&#10;bot.polling()"></textarea>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">المتطلبات (requirements.txt)</label>

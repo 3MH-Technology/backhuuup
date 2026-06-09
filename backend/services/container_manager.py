@@ -109,10 +109,30 @@ class ContainerManager:
 
     @staticmethod
     def _write_boot_loader(work_dir: Path):
-        """Boot loader — sitecustomize.py handles IPv4, just runs user bot."""
+        """Boot loader — patches telebot proxy, runs user bot."""
         code = r'''"""_wolf_boot.py — Wolf Host boot loader."""
-import sys as _sys
+import os as _os, sys as _sys
 
+# ── auto-configure Telegram proxy (Cloudflare Worker) ──
+_cf = _os.environ.get("CF_PROXY", "")
+if _cf:
+    _orig_import = __builtins__.__import__ if isinstance(__builtins__, dict) else __builtins__.__import__
+    def _hook(name, *a, **kw):
+        mod = _orig_import(name, *a, **kw)
+        if name == "telebot.apihelper":
+            try:
+                mod.API_URL = _cf + "/bot{0}/{1}"
+            except Exception:
+                pass
+        elif name == "telebot":
+            try:
+                mod.apihelper.API_URL = _cf + "/bot{0}/{1}"
+            except Exception:
+                pass
+        return mod
+    (__builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__)["__import__"] = _hook
+
+# ── run user bot ──
 _user = _sys.argv[1] if len(_sys.argv) > 1 else "bot.py"
 _sys.argv = [_user] + _sys.argv[2:]
 with open(_user, "rb") as _f:
@@ -170,6 +190,7 @@ with open(_user, "rb") as _f:
                 entry = php_files[0] if php_files else entry
             cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(entry)]
 
+        cf_proxy = os.environ.get("CF_PROXY", "")
         env = {
             "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
             "LANG": os.environ.get("LANG", "en_US.UTF-8"),
@@ -178,6 +199,7 @@ with open(_user, "rb") as _f:
             "TMPDIR": str(work_dir),
             "PYTHONUNBUFFERED": "1",
             "PORT": str(port),
+            "CF_PROXY": cf_proxy,
         }
 
         try:
