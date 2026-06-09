@@ -1,3 +1,6 @@
+import logging
+import os
+
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import text
@@ -33,6 +36,8 @@ engine = create_async_engine(
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
+logger = logging.getLogger("wolfhost.db")
+
 
 class Base(DeclarativeBase):
     pass
@@ -65,12 +70,17 @@ async def init_db():
     async with engine.begin() as conn:
         from models.user import User
         from models.bot import Bot
-        try:
-            await conn.run_sync(Base.metadata.create_all)
-        except Exception:
+        if os.environ.get("RESET_DB") == "1":
             await conn.execute(text("DROP SCHEMA public CASCADE"))
             await conn.execute(text("CREATE SCHEMA public"))
-            await conn.run_sync(Base.metadata.create_all)
+            logger.warning("⚠️ Database reset forced via RESET_DB=1")
+        else:
+            try:
+                await conn.run_sync(Base.metadata.create_all)
+            except Exception:
+                await conn.execute(text("DROP SCHEMA public CASCADE"))
+                await conn.execute(text("CREATE SCHEMA public"))
+                await conn.run_sync(Base.metadata.create_all)
         await _add_missing_columns(conn)
 
 
