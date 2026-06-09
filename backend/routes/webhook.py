@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
-from models.database import get_session
+from models.database import async_session
 from models.bot import Bot
 from services.container_manager import ContainerManager
 
@@ -28,7 +28,7 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
 
 @router.api_route("/{token}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def proxy_webhook_token(request: Request, token: str):
-    async with get_session() as session:
+    async with async_session() as session:
         result = await session.execute(select(Bot).where(Bot.webhook_token == token))
         bot = result.scalar_one_or_none()
     if not bot or not bot.webhook_active:
@@ -41,7 +41,7 @@ async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default=
     token = x_webhook_token.strip() or x_bot_slug.strip()
     if not token:
         raise HTTPException(status_code=400, detail="Missing webhook token")
-    async with get_session() as session:
+    async with async_session() as session:
         result = await session.execute(select(Bot).where(Bot.webhook_token == token))
         bot = result.scalar_one_or_none()
     if not bot or not bot.webhook_active:
@@ -70,7 +70,7 @@ async def _proxy(request: Request, path: str, x_bot_slug: str):
     if not slug:
         raise HTTPException(status_code=400, detail="Missing bot slug")
 
-    async with get_session() as session:
+    async with async_session() as session:
         result = await session.execute(select(Bot).where(Bot.slug == slug))
         bot = result.scalar_one_or_none()
 
