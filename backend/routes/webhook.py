@@ -26,6 +26,16 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
     return ""
 
 
+@router.api_route("/{slug}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def proxy_webhook_slug(request: Request, slug: str):
+    async with get_session() as session:
+        result = await session.execute(select(Bot).where(Bot.slug == slug))
+        bot = result.scalar_one_or_none()
+    if not bot:
+        raise HTTPException(status_code=404, detail=f"No bot found with slug '{slug}'")
+    return await _proxy_bot(request, bot, "")
+
+
 @router.api_route("/", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default="", alias="X-Bot-Slug")):
     return await _proxy(request, "", x_bot_slug)
@@ -34,6 +44,17 @@ async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default=
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def proxy_webhook(request: Request, path: str, x_bot_slug: str = Header(default="", alias="X-Bot-Slug")):
     return await _proxy(request, path, x_bot_slug)
+
+
+async def _proxy_bot(request: Request, bot, path: str):
+    if bot.status != "running" or not bot.container_id:
+        return {"ok": False, "error": f"Bot '{bot.slug}' is not running", "bot_status": bot.status}
+    container_status = ContainerManager.get_status(bot.container_id)
+    if container_status != "running":
+        return {"ok": False, "error": f"Bot is {container_status}", "bot_status": container_status}
+    port = ContainerManager.get_bot_port(bot.container_id) or 8080
+    target_url = f"http://127.0.0.1:{port}/{path}" if path else f"http://127.0.0.1:{port}/"
+    return await _stream(request, target_url, bot.slug)
 
 
 async def _proxy(request: Request, path: str, x_bot_slug: str):
@@ -48,18 +69,11 @@ async def _proxy(request: Request, path: str, x_bot_slug: str):
     if not bot:
         raise HTTPException(status_code=404, detail=f"No bot found with slug '{slug}'")
 
-    if bot.status != "running" or not bot.container_id:
-        return {"ok": False, "error": f"Bot '{slug}' is not running", "bot_status": bot.status}
+    return await _proxy_bot(request, bot, path)
 
-    container_status = ContainerManager.get_status(bot.container_id)
-    if container_status != "running":
-        return {"ok": False, "error": f"Bot is {container_status}", "bot_status": container_status}
 
-    port = ContainerManager.get_bot_port(bot.container_id) or 8080
-    target_url = f"http://127.0.0.1:{port}/{path}" if path else f"http://127.0.0.1:{port}/"
-
+async def _stream(request: Request, target_url: str, slug: str):
     body = await request.body()
-
     headers_to_forward = {
         k: v for k, v in request.headers.items()
         if k.lower() not in ("host", "x-bot-slug", "content-length", "x-forwarded-for",
@@ -83,7 +97,7 @@ async def _proxy(request: Request, path: str, x_bot_slug: str):
                     async for chunk in resp.content.iter_chunked(8192):
                         yield chunk
         except aiohttp.ClientConnectorError:
-            logger.error(f"Webhook proxy: cannot connect to bot {slug} on port {port}")
+            logger.error(f"Webhook proxy: cannot connect to bot {slug}")
             yield b'{"ok":false,"error":"Bot unreachable"}'
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning(f"Webhook proxy failed for {slug}: {e}")

@@ -6,6 +6,7 @@
   <title>Wolf Host — تحكم البوت</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Tajawal', system-ui, sans-serif; }
@@ -124,7 +125,7 @@
           <div id="webhookUrlSection" class="hidden mt-4">
             <label class="block text-sm font-medium text-gray-300 mb-2">رابط Webhook</label>
             <div class="flex gap-2">
-              <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 text-sm" value="https://wolf-host.pages.dev/">
+              <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 text-sm" value="https://wolf-host.pages.dev/api/webhook/">
               <button onclick="copyWebhookUrl()" class="btn-primary px-4 py-2 rounded-xl text-white text-sm">نسخ</button>
             </div>
             <p class="text-xs text-gray-500 mt-2">أرسل طلبات HTTP إلى هذا الرابط مع هيدر <code class="text-yellow-400">X-Bot-Slug</code></p>
@@ -201,7 +202,7 @@
         document.getElementById('webhookToggle').checked = bot.webhook_active || false;
         document.getElementById('webhookUrlSection').classList.toggle('hidden', !bot.webhook_active);
         if (bot.webhook_active && bot.webhook_url) {
-          document.getElementById('webhookUrl').value = bot.webhook_url || 'https://wolf-host.pages.dev/';
+          document.getElementById('webhookUrl').value = bot.webhook_url;
         }
 
         document.getElementById('infoId').textContent = bot.id;
