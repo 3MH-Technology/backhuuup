@@ -38,6 +38,20 @@ class Base(DeclarativeBase):
     pass
 
 
+async def _add_missing_columns(conn):
+    migrations = [
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS is_upload BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS upload_path VARCHAR(512)",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_url VARCHAR(512)",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_active BOOLEAN DEFAULT FALSE",
+    ]
+    for stmt in migrations:
+        try:
+            await conn.execute(text(stmt))
+        except Exception:
+            pass
+
+
 async def init_db():
     async with engine.begin() as conn:
         from models.user import User
@@ -48,6 +62,7 @@ async def init_db():
             await conn.execute(text("DROP SCHEMA public CASCADE"))
             await conn.execute(text("CREATE SCHEMA public"))
             await conn.run_sync(Base.metadata.create_all)
+        await _add_missing_columns(conn)
 
 
 async def get_session():
