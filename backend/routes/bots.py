@@ -4,7 +4,7 @@ import unicodedata
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -15,6 +15,7 @@ from models.bot import Bot
 from models.user import User
 from services.auth_service import AuthService
 from services.container_manager import ContainerManager, BOTS_DIR
+from services.limiter import limiter
 
 router = APIRouter(prefix="/api/bots", tags=["Bot Management"])
 
@@ -102,7 +103,9 @@ async def list_bots(
 
 
 @router.post("/code")
+@limiter.limit("5/hour")
 async def create_bot_code(
+    request: Request,
     req: CreateBotCode,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -142,7 +145,9 @@ async def create_bot_code(
 
 
 @router.post("/upload")
+@limiter.limit("5/hour")
 async def create_bot_upload(
+    request: Request,
     name: str = Form(...),
     bot_type: str = Form(...),
     file: UploadFile = File(...),

@@ -2,7 +2,7 @@ import logging
 from datetime import date
 
 import aiohttp
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.database import get_session
 from models.user import User
 from services.auth_service import AuthService
+from services.limiter import limiter
 
 logger = logging.getLogger("wolfhost.ai")
 
@@ -38,7 +39,9 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat")
+@limiter.limit("10/minute")
 async def chat(
+    request: Request,
     req: ChatRequest,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),

@@ -131,8 +131,10 @@ class ContainerManager:
                 entry = php_files[0] if php_files else entry
             cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(entry)]
 
+        safe_env = {k: v for k, v in os.environ.items()
+                     if not k.startswith(("SECRET_", "JWT_", "HF_", "HUGGING_", "SMTP_", "DB_"))}
         env = {
-            **os.environ,
+            **safe_env,
             "PYTHONUNBUFFERED": "1",
             "HOME": str(work_dir),
             "TMPDIR": str(work_dir),
@@ -261,5 +263,17 @@ def _set_limits():
     try:
         mem_bytes = settings.container_mem_limit_mb * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
+    except Exception:
+        pass
+    try:
+        resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
+    except Exception:
+        pass
+    try:
+        resource.setrlimit(resource.RLIMIT_NPROC, (50, 50))
+    except Exception:
+        pass
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
     except Exception:
         pass
