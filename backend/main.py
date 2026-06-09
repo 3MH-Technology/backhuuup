@@ -19,6 +19,7 @@ from models.database import init_db
 from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router, ai_router
 from services.limiter import limiter
 from services.self_healer import SelfHealer
+from services.container_manager import ContainerManager
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -47,9 +48,12 @@ async def lifespan(app: FastAPI):
     logger.info("✅ Database initialised (PostgreSQL external)")
 
     await SelfHealer.recover_running_bots()
-
+    await ContainerManager.cleanup_stale()
     SelfHealer.start()
     logger.info("✅ Self-healer activated (30s polling)")
+
+    monitor_task = asyncio.create_task(ContainerManager.monitor_loop())
+    logger.info("✅ Resource monitor activated (3s polling)")
 
     backup_task = None
     backup_script = Path("/app/scripts/db_backup.sh")
@@ -75,6 +79,12 @@ async def lifespan(app: FastAPI):
         logger.info(f"✅ Auto-backup scheduled every {settings.backup_interval_hours}h to GitHub")
 
     yield
+
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        pass
 
     if backup_task:
         backup_task.cancel()

@@ -29,6 +29,7 @@ MAX_ZIP_SIZE = 10 * 1024 * 1024
 class ContainerManager:
     _instances: dict[str, dict] = {}
     _port_allocator = iter(range(9000, 10000))
+    _resource_cache: dict[str, dict] = {}
 
     @staticmethod
     def _allocate_port() -> int:
@@ -167,6 +168,7 @@ class ContainerManager:
                 "bot_id": bot_id,
                 "port": port,
             }
+            cls._resource_cache[name] = {"cpu": 0.0, "memory_mb": 0.0}
 
             logger.info(f"Bot {name} started (PID {process.pid}, port {port})")
             return {
@@ -210,6 +212,7 @@ class ContainerManager:
         if instance.get("log_fh"):
             instance["log_fh"].close()
         cls._instances.pop(container_id, None)
+        cls._resource_cache.pop(container_id, None)
         logger.info(f"Bot {container_id} stopped")
         return {"status": "success", "message": "Bot stopped"}
 
@@ -246,23 +249,67 @@ class ContainerManager:
     def get_resource_usage(cls, container_id: str) -> dict:
         if not container_id:
             return {"cpu": 0, "memory_mb": 0}
-        instance = cls._instances.get(container_id)
-        if not instance:
+        if container_id not in cls._instances:
             return {"cpu": 0, "memory_mb": 0}
-        process = instance["process"]
-        try:
-            proc = psutil.Process(process.pid)
-            cpu = proc.cpu_percent(interval=0.1)
-            mem = proc.memory_info().rss / 1024 / 1024
-            return {"cpu": round(cpu, 1), "memory_mb": round(mem, 1)}
-        except (psutil.NoSuchProcess, ProcessLookupError):
-            return {"cpu": 0, "memory_mb": 0}
+        cached = cls._resource_cache.get(container_id)
+        if cached:
+            return cached
+        return {"cpu": 0, "memory_mb": 0}
 
     @classmethod
     def container_exists(cls, container_id: str) -> bool:
         if not container_id:
             return False
         return container_id in cls._instances
+
+    @classmethod
+    async def monitor_loop(cls):
+        while True:
+            try:
+                cls._poll_all_resources()
+            except Exception:
+                pass
+            await asyncio.sleep(3)
+
+    @classmethod
+    def _poll_all_resources(cls):
+        for cid, inst in list(cls._instances.items()):
+            process = inst.get("process")
+            if not process or process.returncode is not None:
+                cls._resource_cache.pop(cid, None)
+                continue
+            try:
+                proc = psutil.Process(process.pid)
+                with proc.oneshot():
+                    cpu = proc.cpu_percent(interval=0)
+                    mem = proc.memory_info().rss / 1024 / 1024
+                    children = proc.children(recursive=True)
+                    for child in children:
+                        try:
+                            with child.oneshot():
+                                cpu += child.cpu_percent(interval=0)
+                                mem += child.memory_info().rss / 1024 / 1024
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
+                cls._resource_cache[cid] = {
+                    "cpu": round(min(cpu, 100.0), 1),
+                    "memory_mb": round(mem, 1),
+                }
+            except (psutil.NoSuchProcess, psutil.AccessDenied, ProcessLookupError):
+                cls._resource_cache.pop(cid, None)
+
+    @classmethod
+    async def cleanup_stale(cls):
+        stale = []
+        for cid, inst in cls._instances.items():
+            process = inst.get("process")
+            if process and process.returncode is not None:
+                stale.append(cid)
+        for cid in stale:
+            inst = cls._instances.pop(cid, None)
+            if inst and inst.get("log_fh"):
+                inst["log_fh"].close()
+            cls._resource_cache.pop(cid, None)
 
 
 def _set_limits():
