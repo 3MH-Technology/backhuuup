@@ -113,20 +113,24 @@ class ContainerManager:
         code = r'''"""_wolf_boot.py — Wolf Host boot loader."""
 import os as _os, sys as _sys
 
-# ── auto-configure Telegram proxy (Cloudflare Worker) ──
+# ── auto-configure Telegram proxy (local HTTP → Cloudflare Worker) ──
+# Bot subprocess connects via HTTP to the main app (port 7860),
+# which forwards to the Cloudflare Worker via HTTPS.
+# This avoids SSL memory overhead in the memory-limited bot subprocess.
 _cf = _os.environ.get("CF_PROXY", "")
 if _cf:
+    _proxy_url = "http://127.0.0.1:7860/api/__proxy/bot{0}/{1}"
     _orig_import = __builtins__.__import__ if isinstance(__builtins__, dict) else __builtins__.__import__
     def _hook(name, *a, **kw):
         mod = _orig_import(name, *a, **kw)
         if name == "telebot.apihelper":
             try:
-                mod.API_URL = _cf + "/bot{0}/{1}"
+                mod.API_URL = _proxy_url
             except Exception:
                 pass
         elif name == "telebot":
             try:
-                mod.apihelper.API_URL = _cf + "/bot{0}/{1}"
+                mod.apihelper.API_URL = _proxy_url
             except Exception:
                 pass
         return mod

@@ -9,8 +9,9 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
+import aiohttp
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -152,6 +153,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.api_route("/api/__proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
+async def bot_proxy(request: Request, path: str):
+    cf_proxy = os.environ.get("CF_PROXY", "")
+    if not cf_proxy:
+        return JSONResponse({"ok": False, "error_code": 502, "description": "Proxy not configured"}, status_code=502)
+    target = f"{cf_proxy}/{path}"
+    if request.url.query:
+        target += f"?{request.url.query}"
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host")}
+    body = await request.body()
+    timeout = aiohttp.ClientTimeout(total=120, connect=10)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as sess:
+            async with sess.request(method=request.method, url=target, headers=headers, data=body or None) as resp:
+                content = await resp.read()
+                return Response(content=content, status_code=resp.status, media_type=resp.content_type or "application/json")
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        logger.warning(f"bot_proxy error for {path}: {e}")
+        return JSONResponse({"ok": False, "error_code": 502, "description": "Upstream unreachable"}, status_code=502)
 
 
 @app.middleware("http")
