@@ -1,7 +1,10 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import settings
 from models.database import get_session
 from services.auth_service import AuthService
 from services.limiter import limiter
@@ -98,7 +101,6 @@ async def me(user=Depends(AuthService.get_current_user)):
 
 @router.get("/debug-smtp")
 async def debug_smtp():
-    import os
     return {
         "smtp_user_setting": bool(settings.smtp_user),
         "smtp_pass_setting": bool(settings.smtp_password),
