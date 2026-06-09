@@ -325,9 +325,10 @@ with open(_user, "rb") as _f:
 
     @classmethod
     async def monitor_loop(cls):
+        loop = asyncio.get_event_loop()
         while True:
             try:
-                cls._poll_all_resources()
+                await loop.run_in_executor(None, cls._poll_all_resources)
             except Exception:
                 pass
             await asyncio.sleep(3)
@@ -342,13 +343,13 @@ with open(_user, "rb") as _f:
             try:
                 proc = psutil.Process(process.pid)
                 with proc.oneshot():
-                    cpu = proc.cpu_percent(interval=0)
+                    cpu = proc.cpu_percent(interval=0.1)
                     mem = proc.memory_info().rss / 1024 / 1024
                     children = proc.children(recursive=True)
                     for child in children:
                         try:
                             with child.oneshot():
-                                cpu += child.cpu_percent(interval=0)
+                                cpu += child.cpu_percent(interval=0.1)
                                 mem += child.memory_info().rss / 1024 / 1024
                         except (psutil.NoSuchProcess, psutil.AccessDenied):
                             pass
