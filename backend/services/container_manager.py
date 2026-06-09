@@ -161,6 +161,11 @@ with open(_user, "rb") as _f:
         name = cls.container_name(user_id, slug)
         work_dir = cls._work_dir(user_id, bot_id)
 
+        # Stop any existing instance first (prevents multiple copies → 409 Conflict)
+        if name in cls._instances:
+            logger.info(f"Stopping previous instance of {name} before restart")
+            await cls.stop_bot(name)
+
         if not is_upload:
             cls._write_main_file(work_dir, bot_type, main_file_content)
             if bot_type == "python":

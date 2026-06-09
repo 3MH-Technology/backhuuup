@@ -81,7 +81,6 @@
         <button onclick="switchTab('code')" id="tabCode" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">تعديل الكود</button>
         <button onclick="switchTab('webhook')" id="tabWebhook" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">Webhook</button>
         <button onclick="switchTab('settings')" id="tabSettings" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">الإعدادات</button>
-        <button onclick="switchTab('help')" id="tabHelp" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">🌐 بروكسي</button>
         <button onclick="deleteBot()" class="px-6 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 whitespace-nowrap mr-auto">حذف</button>
       </div>
 
@@ -134,37 +133,6 @@
               <input type="text" id="webhookToken" readonly class="code-area w-full px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-emerald-400 text-sm font-mono" value="">
             </div>
             <p class="text-xs text-gray-500 mt-2">الرابط فريد وآمن. لا أحد يقدر يخمنه.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab: Help / Proxy -->
-      <div id="panelHelp" class="hidden p-6 space-y-6">
-        <div class="card p-5">
-          <h3 class="text-lg font-bold text-white mb-4">🌐 بروكسي تيليجرام</h3>
-          <p class="text-sm text-gray-400 mb-3">HF Space يحظر الاتصال بـ api.telegram.org. استخدم البروكسي المدمج:</p>
-          <div class="bg-gray-900/80 rounded-xl p-4 code-area text-sm text-green-400" dir="ltr" style="text-align:left">
-# ✅ المشكلة محلولة تلقائياً — ما يحتاج أي تعديل<br>
-# Wolf Host يطبق DNS fix (IPv4 فقط) وبروكسي API تلقائياً<br>
-<br>
-import telebot<br>
-bot = telebot.TeleBot("TOKEN")<br>
-<br>
-@bot.message_handler(commands=['start'])<br>
-def start(msg):<br>
-&nbsp;&nbsp;bot.reply_to(msg, 'مرحباً!')<br>
-<br>
-bot.polling()
-          </div>
-          <p class="text-xs text-gray-500 mt-3">✅ <strong class="text-green-400">DNS fix + بروكسي تلقائي</strong> الآن — اكتب كودك بشكل طبيعي، المنصة تهتم بالباقي.</p>
-        </div>
-        <div class="card p-5">
-          <h3 class="text-lg font-bold text-white mb-2">🐺 الترويج</h3>
-          <p class="text-sm text-gray-400 mb-4">ساهم في نشر المنصة ليستفيد الجميع</p>
-          <div class="flex flex-wrap gap-3 text-sm">
-            <a href="https://t.me/j49_c" target="_blank" class="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition">@j49_c</a>
-            <a href="https://t.me/O5O6J" target="_blank" class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition">@O5O6J</a>
-            <a href="https://x.com/wolfhost_1" target="_blank" class="px-4 py-2 rounded-xl bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition">@wolfhost_1</a>
           </div>
         </div>
       </div>
