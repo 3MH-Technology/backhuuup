@@ -118,6 +118,63 @@ class AuthService:
         return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "username": user.username}}
 
     @staticmethod
+    async def forgot_password(email: str, username: str, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.email == email, User.username == username))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="البريد أو اسم المستخدم غير صحيح")
+
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if user.reset_date != today:
+            user.reset_date = today
+            user.reset_attempts_today = 0
+            user.reset_code = None
+            user.reset_cooldown_until = None
+
+        if user.reset_attempts_today >= 3:
+            raise HTTPException(status_code=429, detail="لقد استنفذت محاولاتك اليومية (3 محاولات). حاول بكرة.")
+
+        now = datetime.now(timezone.utc)
+        if user.reset_cooldown_until and now < user.reset_cooldown_until:
+            remaining = int((user.reset_cooldown_until - now).total_seconds())
+            raise HTTPException(status_code=429, detail=f"انتظر {remaining} ثانية قبل إعادة المحاولة")
+
+        cooldowns = [60, 120, 300]
+        level = user.reset_attempts_today
+
+        code = generate_code()
+        user.reset_code = code
+        user.reset_attempts_today = level + 1
+        user.reset_cooldown_until = now + timedelta(seconds=cooldowns[min(level, len(cooldowns) - 1)])
+        await session.commit()
+
+        sent = send_verification(email, code)
+        if not sent:
+            user.reset_code = None
+            await session.commit()
+            raise HTTPException(status_code=500, detail="فشل إرسال البريد. تحقق من إعدادات SMTP.")
+
+        return {"message": "تم إرسال كود إعادة تعيين كلمة المرور إلى بريدك"}
+
+    @staticmethod
+    async def reset_password(email: str, code: str, new_password: str, session: AsyncSession) -> dict:
+        result = await session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="البريد غير مسجل")
+        if user.reset_code is None or user.reset_code != code:
+            raise HTTPException(status_code=400, detail="كود خاطئ أو منتهي الصلاحية")
+
+        if len(new_password) < 8 or not any(c.isupper() for c in new_password) or not any(c.islower() for c in new_password) or not any(c.isdigit() for c in new_password):
+            raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل، تحتوي على حرف كبير، حرف صغير، ورقم")
+
+        user.hashed_password = get_password_hash(new_password)
+        user.reset_code = None
+        user.reset_cooldown_until = None
+        await session.commit()
+        return {"message": "تم تغيير كلمة المرور بنجاح. سجل دخول الآن."}
+
+    @staticmethod
     async def get_current_user(
         credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
         session: AsyncSession = Depends(get_session),

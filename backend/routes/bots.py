@@ -299,7 +299,7 @@ async def start_bot(
         raise HTTPException(status_code=404, detail="Bot not found")
 
     if _is_expired(bot):
-        raise HTTPException(status_code=403, detail="انتهت صلاحية البوت. جدد الاشتراك أولاً.")
+        bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
 
     outcome = await ContainerManager.start_bot(
         bot_id=bot.id,
@@ -356,7 +356,7 @@ async def restart_bot(
         raise HTTPException(status_code=404, detail="Bot not found")
 
     if _is_expired(bot):
-        raise HTTPException(status_code=403, detail="انتهت صلاحية البوت. جدد الاشتراك أولاً.")
+        bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
 
     if bot.container_id:
         await ContainerManager.stop_bot(bot.container_id)
@@ -414,7 +414,7 @@ async def update_webhook(
         raise HTTPException(status_code=404, detail="Bot not found")
 
     if _is_expired(bot):
-        raise HTTPException(status_code=403, detail="انتهت صلاحية البوت. جدد الاشتراك أولاً.")
+        bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
 
     bot.webhook_active = not bot.webhook_active
     bot.webhook_url = f"/api/webhook/" if bot.webhook_active else None

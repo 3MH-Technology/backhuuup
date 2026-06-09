@@ -47,3 +47,8 @@ async def ai_page():
 @router.get("/verify", response_class=HTMLResponse)
 async def verify_page():
     return _render_html("verify.html")
+
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page():
+    return _render_html("forgot_password.html")

@@ -17,6 +17,11 @@ class User(Base):
     email_verified = Column(Integer, default=0)
     verification_code = Column(String(10), nullable=True)
 
+    reset_code = Column(String(10), nullable=True)
+    reset_date = Column(String(20), nullable=True)
+    reset_attempts_today = Column(Integer, default=0)
+    reset_cooldown_until = Column(DateTime(timezone=True), nullable=True)
+
     ai_messages_today = Column(Integer, default=0)
     ai_date = Column(String(20), nullable=True)
 

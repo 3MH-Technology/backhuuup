@@ -30,6 +30,17 @@ class VerifyRequest(BaseModel):
     code: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    username: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
+
+
 def validate_password(password: str):
     if len(password) < 8:
         raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل")
@@ -66,6 +77,18 @@ async def send_code(request: Request, req: EmailRequest, session: AsyncSession =
 @limiter.limit("10/minute")
 async def verify(request: Request, req: VerifyRequest, session: AsyncSession = Depends(get_session)):
     return await AuthService.verify_email(req.email, req.code, session)
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/hour")
+async def forgot_password(request: Request, req: ForgotPasswordRequest, session: AsyncSession = Depends(get_session)):
+    return await AuthService.forgot_password(req.email, req.username, session)
+
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, req: ResetPasswordRequest, session: AsyncSession = Depends(get_session)):
+    return await AuthService.reset_password(req.email, req.code, req.new_password, session)
 
 
 @router.get("/me")
