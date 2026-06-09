@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from config import settings, BASE_DIR
 from models.database import init_db, async_session
-from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router, ai_router
+from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router, ai_router, tg_proxy_router
 from services.limiter import limiter
 from services.self_healer import SelfHealer
 from services.container_manager import ContainerManager
@@ -170,6 +170,7 @@ app.include_router(logs_router)
 app.include_router(webhook_router)
 app.include_router(backup_router)
 app.include_router(ai_router)
+app.include_router(tg_proxy_router)
 
 
 if __name__ == "__main__":

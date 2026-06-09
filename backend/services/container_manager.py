@@ -146,6 +146,7 @@ class ContainerManager:
             "HOME": str(work_dir),
             "TMPDIR": str(work_dir),
             "PORT": str(port),
+            "TG_PROXY": "http://127.0.0.1:7860/api/tg",
         }
 
         try:
