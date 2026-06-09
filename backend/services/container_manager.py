@@ -64,7 +64,8 @@ class ContainerManager:
 
     @staticmethod
     def _sanitize_path(path: str) -> bool:
-        if ".." in path or path.startswith("/"):
+        normalized = Path(path).as_posix()
+        if ".." in normalized or normalized.startswith("/") or normalized.startswith("\\"):
             return False
         return True
 

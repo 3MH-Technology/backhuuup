@@ -26,7 +26,7 @@ ALLOWED_UPLOAD_EXTS = {".py", ".php", ".zip"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 class CreateBotCode(BaseModel):
-    name: str = Field(..., min_length=2, max_length=100)
+    name: str = Field(..., min_length=2, max_length=100, pattern=r"^[^<>\"'&]+$")
     bot_type: str = Field(..., pattern="^(python|php)$")
     main_file: str = Field(..., min_length=1)
     requirements: str = ""
@@ -70,8 +70,11 @@ def _sanitize_zip(zip_path: Path) -> list[str]:
             if info.is_dir():
                 continue
             fname = info.filename
-            if ".." in fname or fname.startswith("/"):
-                raise HTTPException(status_code=400, detail=f"不安全路径 في الملف المضغوط: {fname}")
+            normalized = Path(fname).as_posix()
+            if ".." in normalized or normalized.startswith("/") or normalized.startswith("\\"):
+                raise HTTPException(status_code=400, detail=f"مسار غير آمن في الملف المضغوط: {fname}")
+            if info.is_symlink():
+                raise HTTPException(status_code=400, detail=f"روابط رمزية غير مسموحة: {fname}")
             ext = Path(fname).suffix.lower()
             if ext not in ALLOWED_UPLOAD_EXTS and ext != ".txt":
                 raise HTTPException(status_code=400, detail=f"امتداد غير مسموح: {fname}")
@@ -216,6 +219,9 @@ async def create_bot_upload(
                 status_code=429,
                 detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
             )
+
+    if any(c in name for c in "<>\"'&"):
+        raise HTTPException(status_code=400, detail="اسم البوت يحتوي على أحرف غير مسموحة")
 
     if not _allowed_file(file.filename):
         raise HTTPException(status_code=400, detail="الامتداد غير مسموح. فقط .py, .php, .zip")
@@ -410,7 +416,7 @@ async def update_webhook(
     else:
         bot.webhook_url = None
     await session.commit()
-    return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url, "webhook_token_full": bot.webhook_token}
+    return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url}
 
 
 @router.delete("/{bot_id}")

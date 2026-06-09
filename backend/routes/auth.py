@@ -75,7 +75,8 @@ async def reset_password(request: Request, req: ResetPasswordRequest, session: A
 
 
 @router.get("/me")
-async def me(session: AsyncSession = Depends(get_session), user=Depends(AuthService.get_current_user)):
+@limiter.limit("30/minute")
+async def me(request: Request, session: AsyncSession = Depends(get_session), user=Depends(AuthService.get_current_user)):
     await session.refresh(user)
     is_admin = getattr(user, "is_admin", False)
     return {"id": user.id, "username": user.username, "is_admin": is_admin}

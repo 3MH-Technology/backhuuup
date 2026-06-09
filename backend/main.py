@@ -16,9 +16,9 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from config import settings, BASE_DIR
+from services.limiter import limiter
 from models.database import init_db, async_session
 from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router, ai_router, tg_proxy_router
-from services.limiter import limiter
 from services.self_healer import SelfHealer
 from services.container_manager import ContainerManager
 
@@ -163,11 +163,16 @@ app.add_middleware(
 
 
 @app.api_route("/api/__proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
+@limiter.limit("30/minute")
 async def bot_proxy(request: Request, path: str):
+    client_host = request.client.host if request.client else ""
+    if client_host not in ("127.0.0.1", "::1", "localhost"):
+        return JSONResponse({"ok": False, "error_code": 403, "description": "Forbidden"}, status_code=403)
     cf_proxy = os.environ.get("CF_PROXY", "")
     if not cf_proxy:
         return JSONResponse({"ok": False, "error_code": 502, "description": "Proxy not configured"}, status_code=502)
-    target = f"{cf_proxy}/{path}"
+    clean_path = path.replace("..", "").replace("@", "").replace("//", "/")
+    target = f"{cf_proxy}/{clean_path}"
     if request.url.query:
         target += f"?{request.url.query}"
     headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host")}
@@ -231,5 +236,4 @@ if __name__ == "__main__":
         reload=False,
         log_level=settings.log_level,
         proxy_headers=True,
-        forwarded_allow_ips="*",
     )
