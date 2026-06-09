@@ -109,16 +109,16 @@ class ContainerManager:
 
     @staticmethod
     def _write_sitecustomize(work_dir: Path):
-        """DNS fix: force IPv4 + auto-configure Telegram proxy."""
+        """DNS fix: force IPv6 — HF Space is IPv6-native."""
         code = r'''"""sitecustomize.py — runs at Python startup (PYTHONPATH)."""
 import os as _os
 import socket as _socket
 
-# Force IPv4-only DNS resolution (fixes SSL/Cannot allocate memory on HF Spaces)
+# Force IPv6-only DNS resolution — HF Space is IPv6-native, IPv4 to Telegram gets DPI-throttled
 _orig_getaddrinfo = _socket.getaddrinfo
-def _ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-    return _orig_getaddrinfo(host, port, _socket.AF_INET, type, proto, flags)
-_socket.getaddrinfo = _ipv4_getaddrinfo
+def _ipv6_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_getaddrinfo(host, port, _socket.AF_INET6, type, proto, flags)
+_socket.getaddrinfo = _ipv6_getaddrinfo
 '''
         f = work_dir / "sitecustomize.py"
         f.write_text(code, encoding="utf-8")
