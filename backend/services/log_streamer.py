@@ -29,15 +29,28 @@ class LogStreamer:
         last_content = ""
         while True:
             try:
-                raw = await ContainerManager.get_logs(container_id, tail=200) if container_id else ""
+                cid = container_id
+                from models.database import async_session
+                from models.bot import Bot
+                from sqlalchemy import select
+                async with async_session() as session:
+                    result = await session.execute(select(Bot.container_id).where(Bot.id == bot_id))
+                    row = result.one_or_none()
+                    if row:
+                        cid = row[0] or cid
+
+                raw = await ContainerManager.get_logs(cid, tail=200) if cid else ""
                 if raw and raw != last_content:
                     new_part = raw[len(last_content):] if raw.startswith(last_content) else raw
                     if new_part.strip():
                         await websocket.send_json({"type": "log", "data": new_part})
                     last_content = raw
-                status = ContainerManager.get_status(container_id) if container_id else "stopped"
+                status = ContainerManager.get_status(cid) if cid else "stopped"
                 await websocket.send_json({"type": "status", "data": status})
             except Exception:
-                await websocket.send_json({"type": "status", "data": "stopped"})
+                try:
+                    await websocket.send_json({"type": "status", "data": "stopped"})
+                except Exception:
+                    pass
                 break
             await asyncio.sleep(0.5)

@@ -16,7 +16,7 @@ def _render_html(filename: str) -> HTMLResponse:
 
 @router.get("/", response_class=HTMLResponse)
 async def index():
-    return _render_html("login.html")
+    return _render_html("landing.html")
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -37,3 +37,8 @@ async def dashboard_page():
 @router.get("/bot/{bot_id}", response_class=HTMLResponse)
 async def bot_control_page(bot_id: int):
     return _render_html("bot_control.html")
+
+
+@router.get("/ai", response_class=HTMLResponse)
+async def ai_page():
+    return _render_html("ai_assistant.html")

@@ -4,5 +4,6 @@ from .logs import router as logs_router
 from .frontend import router as frontend_router
 from .webhook import router as webhook_router
 from .backup import router as backup_router
+from .ai import router as ai_router
 
-__all__ = ["auth_router", "bots_router", "logs_router", "frontend_router", "webhook_router", "backup_router"]
+__all__ = ["auth_router", "bots_router", "logs_router", "frontend_router", "webhook_router", "backup_router", "ai_router"]

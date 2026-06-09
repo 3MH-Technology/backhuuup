@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config import settings, BASE_DIR
 from models.database import init_db
-from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router
+from routes import auth_router, bots_router, logs_router, frontend_router, webhook_router, backup_router, ai_router
 from services.self_healer import SelfHealer
 
 logging.basicConfig(
@@ -109,6 +109,7 @@ app.include_router(bots_router)
 app.include_router(logs_router)
 app.include_router(webhook_router)
 app.include_router(backup_router)
+app.include_router(ai_router)
 
 
 if __name__ == "__main__":

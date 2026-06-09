@@ -14,4 +14,7 @@ class User(Base):
     is_active = Column(Integer, default=1)
     device_fingerprint = Column(String(255), nullable=True)
 
+    ai_messages_today = Column(Integer, default=0)
+    ai_date = Column(String(20), nullable=True)
+
     bots = relationship("Bot", back_populates="owner", cascade="all, delete-orphan")

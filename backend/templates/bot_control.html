@@ -38,6 +38,7 @@
         <a href="/dashboard" class="text-gray-400 hover:text-white transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
+        <a href="/ai" class="text-gray-400 hover:text-white transition text-sm ml-2" title="المساعد الذكي">🤖</a>
         <div>
           <h1 id="botName" class="text-2xl font-bold text-white">—</h1>
           <div class="flex items-center gap-2 mt-1">
@@ -88,6 +89,7 @@
           <span id="liveIndicator" class="flex items-center gap-1.5 text-xs text-emerald-400">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> مباشر
           </span>
+          <button onclick="fetchLogsRest()" class="text-xs text-gray-500 hover:text-blue-400 transition">تحديث</button>
         </div>
         <div id="logConsole" class="console h-96 overflow-y-auto p-4 text-gray-300 whitespace-pre-wrap break-all">
           <span class="text-gray-600">// السجلات ستظهر هنا عند تشغيل البوت ...</span>
@@ -289,6 +291,19 @@
       } catch (e) { console.error(e); }
     }
 
+    async function fetchLogsRest() {
+      try {
+        const res = await fetch(`${API}/api/logs/${botId}`, { headers: getHeaders() });
+        const data = await res.json();
+        const console = document.getElementById('logConsole');
+        if (data.logs && data.logs.length) {
+          console.innerHTML = data.logs.map(l => escapeHtml(l)).join('<br>');
+        } else {
+          console.innerHTML = '<span class="text-gray-600">// لا توجد سجلات بعد</span>';
+        }
+      } catch (e) {}
+    }
+
     function switchTab(tab) {
       document.querySelectorAll('[id^="panel"]').forEach(p => p.classList.add('hidden'));
       document.querySelectorAll('[id^="tab"]').forEach(t => { t.classList.remove('tab-active'); t.classList.add('text-gray-500'); });
@@ -296,14 +311,20 @@
       const tabEl = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
       tabEl.classList.add('tab-active');
       tabEl.classList.remove('text-gray-500');
-      if (tab === 'logs') connectLogs();
+      if (tab === 'logs') { fetchLogsRest(); connectLogs(); }
+    }
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
     }
 
     function connectLogs() {
       if (ws) { ws.close(); ws = null; }
       const console = document.getElementById('logConsole');
       console.innerHTML = '<span class="text-gray-600">// جاري الاتصال...</span>';
-      document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> متصل...';
+      document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> جاري الاتصال...';
 
       ws = new WebSocket(`${WS_BASE}/api/logs/ws/${botId}?token=${token}`);
 

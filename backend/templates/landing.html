@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolf Host — استضافة الذب هوست | منصة استضافة البوتات المجانية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Tajawal', system-ui, sans-serif; }
+    body { background: #0a0f1e; }
+    .gradient-text { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .glow { text-shadow: 0 0 60px rgba(59,130,246,0.3); }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; backdrop-filter: blur(12px); }
+    .card:hover { border-color: rgba(255,255,255,0.12); }
+    .btn-primary { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px -8px rgba(37,99,235,0.5); }
+    .btn-outline { border: 1px solid rgba(255,255,255,0.15); }
+    .btn-outline:hover { border-color: rgba(255,255,255,0.3); }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .float { animation: float 3s ease-in-out infinite; }
+    @keyframes pulse-glow { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+    .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <img src="/static/logo.jpg" class="w-10 h-10 rounded-xl object-cover border border-gray-700/50">
+      <span class="text-white font-black text-lg">Wolf Host</span>
+    </div>
+    <div class="flex items-center gap-3 text-sm">
+      <a href="/login" class="text-gray-400 hover:text-white transition px-4 py-2">دخول</a>
+      <a href="/register" class="btn-primary px-5 py-2 rounded-xl text-white font-medium">ابدأ مجاناً</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
+    <div class="flex justify-center mb-8">
+      <img src="/static/logo.jpg" class="w-28 h-28 rounded-3xl object-cover border-2 border-gray-700/50 shadow-2xl shadow-blue-500/10 float">
+    </div>
+    <h1 class="text-5xl md:text-7xl font-black text-white glow mb-6">استضافة <span class="gradient-text">الذب هوست</span></h1>
+    <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-10">منصة عربية مجانية لاستضافة بوتات التيليجرام وسكربتات PHP — ارفع، شغل، وروج لحساباتك 🐺</p>
+    <div class="flex flex-wrap gap-4 justify-center">
+      <a href="/register" class="btn-primary px-8 py-4 rounded-2xl text-white font-bold text-lg">أنشئ حساب مجاني 🚀</a>
+      <a href="/login" class="btn-outline px-8 py-4 rounded-2xl text-gray-300 font-medium text-lg">تسجيل الدخول</a>
+    </div>
+    <div class="mt-12 flex items-center justify-center gap-6 text-sm text-gray-600">
+      <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> مجاني 100%</span>
+      <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> بايثون + PHP</span>
+      <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Webhook</span>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="max-w-5xl mx-auto px-4 py-16">
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="card p-8 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-5">
+          <svg class="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-3">بوتات بايثون</h3>
+        <p class="text-sm text-gray-400">استضف بوتات التيليجرام المبنية باي مكتبة. ارفع كودك أو ملفات مضغوطة.</p>
+      </div>
+      <div class="card p-8 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-5">
+          <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-3">سكربتات PHP</h3>
+        <p class="text-sm text-gray-400">شغل سكربتات PHP مع Webhook مباشر. بدون متطلبات، ارفع وشغل فوراً.</p>
+      </div>
+      <div class="card p-8 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-5">
+          <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-3">مجاني وآمن</h3>
+        <p class="text-sm text-gray-400">128MB RAM لكل بوت، عزل كامل، وحد 3 بوتات لكل مستخدم. مجاناً للأبد.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="max-4xl mx-auto px-4 py-16 text-center">
+    <h2 class="text-3xl font-black text-white mb-12">كيف تعمل المنصة؟</h2>
+    <div class="grid md:grid-cols-4 gap-6">
+      <div class="card p-6">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4 text-blue-400 font-bold text-xl">1</div>
+        <h4 class="font-bold text-white mb-2">أنشئ حساب</h4>
+        <p class="text-sm text-gray-400">بريد + كلمة مرور. حساب واحد لكل جهاز.</p>
+      </div>
+      <div class="card p-6">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4 text-purple-400 font-bold text-xl">2</div>
+        <h4 class="font-bold text-white mb-2">ارفع البوت</h4>
+        <p class="text-sm text-gray-400">اكتب كود أو ارفع ملف .py/.php/.zip</p>
+      </div>
+      <div class="card p-6">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4 text-emerald-400 font-bold text-xl">3</div>
+        <h4 class="font-bold text-white mb-2">شغّل البوت</h4>
+        <p class="text-sm text-gray-400">كبسة زر — البوت يشتغل فوراً.</p>
+      </div>
+      <div class="card p-6">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4 text-amber-400 font-bold text-xl">4</div>
+        <h4 class="font-bold text-white mb-2">روّج لحساباتك</h4>
+        <p class="text-sm text-gray-400">استخدم البوت لترويج خدماتك وحساباتك.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Promo -->
+  <section class="max-w-3xl mx-auto px-4 py-16 text-center">
+    <div class="card p-10">
+      <h2 class="text-2xl font-black text-white mb-4">هدفنا: ترويج حسابات المطورين العرب 🐺</h2>
+      <p class="text-gray-400 mb-6">Wolf Host مبني لمساعدتك في نشر وترويج حساباتك على تيليجرام، إكس، وأي منصة أخرى. كل بوت هو فرصة لتنمية حضورك الرقمي.</p>
+      <div class="flex flex-wrap gap-4 justify-center text-sm">
+        <a href="https://t.me/j49_c" target="_blank" class="px-5 py-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition">تيليجرام: @j49_c</a>
+        <a href="https://t.me/O5O6J" target="_blank" class="px-5 py-2.5 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition">القناة: @O5O6J</a>
+        <a href="https://x.com/wolfhost_1" target="_blank" class="px-5 py-2.5 rounded-xl bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition">إكس: @wolfhost_1</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="max-w-6xl mx-auto px-4 py-8 border-t border-gray-800/50 text-center text-sm text-gray-600">
+    <div class="flex items-center justify-center gap-2 mb-3">
+      <img src="/static/logo.jpg" class="w-6 h-6 rounded object-cover">
+      <span class="text-white font-bold">Wolf Host</span>
+    </div>
+    <p>مبني بـ ❤️ بواسطة <span class="text-gray-400 font-bold">الذئب الأبيض 🐺</span></p>
+    <div class="flex items-center justify-center gap-4 mt-3">
+      <a href="https://t.me/j49_c" target="_blank" class="hover:text-blue-400 transition">@j49_c</a>
+      <a href="https://t.me/O5O6J" target="_blank" class="hover:text-blue-400 transition">@O5O6J</a>
+      <a href="https://x.com/wolfhost_1" target="_blank" class="hover:text-blue-400 transition">@wolfhost_1</a>
+    </div>
+  </footer>
+</body>
+</html>
