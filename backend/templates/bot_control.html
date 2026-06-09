@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolf Host — تحكم البوت</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Tajawal', system-ui, sans-serif; }
+    .bg-app { background: linear-gradient(135deg, #0a0f1e 0%, #111827 50%, #0a0f1e 100%); }
+    .card { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; transition: all .2s; }
+    .card:hover { border-color: rgba(255,255,255,0.12); }
+    .btn-primary { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px -5px rgba(37,99,235,0.4); }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #db2777); }
+    .btn-success { background: linear-gradient(135deg, #059669, #0d9488); }
+    .console { background: #0a0a0f; font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; line-height: 1.6; }
+    .console::-webkit-scrollbar { width: 6px; }
+    .console::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .status-dot.running { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+    .status-dot.stopped { background: #6b7280; }
+    .status-dot.crashed { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+    .code-area { font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; direction: ltr; text-align: left; }
+    .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-up { animation: slideUp .3s ease; }
+  </style>
+</head>
+<body class="bg-app text-gray-100 min-h-screen">
+  <div class="max-w-6xl mx-auto p-4 md:p-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="text-gray-400 hover:text-white transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+          <h1 id="botName" class="text-2xl font-bold text-white">—</h1>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="statusDot" class="status-dot stopped"></span>
+            <span id="statusText" class="text-sm text-gray-400">جاري التحميل...</span>
+            <span class="text-gray-600 mx-1">·</span>
+            <span id="botType" class="text-sm text-gray-500">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button id="btnStart" onclick="controlBot('start')" class="btn-success px-4 py-2 rounded-xl text-white text-sm font-medium">تشغيل</button>
+        <button id="btnStop" onclick="controlBot('stop')" class="btn-danger px-4 py-2 rounded-xl text-white text-sm font-medium">إيقاف</button>
+        <button id="btnRestart" onclick="controlBot('restart')" class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition">إعادة تشغيل</button>
+      </div>
+    </div>
+
+    <!-- Resource Stats -->
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-bold text-emerald-400" id="cpuDisplay">0%</div>
+        <div class="text-xs text-gray-500 mt-1">المعالج (CPU)</div>
+      </div>
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-bold text-blue-400" id="ramDisplay">0 MB</div>
+        <div class="text-xs text-gray-500 mt-1">الذاكرة (RAM)</div>
+      </div>
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-bold text-purple-400" id="restartsDisplay">0</div>
+        <div class="text-xs text-gray-500 mt-1">عدد إعادة التشغيل</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card overflow-hidden">
+      <div class="flex border-b border-gray-800/50 overflow-x-auto">
+        <button onclick="switchTab('logs')" id="tabLogs" class="tab-active px-6 py-3 text-sm font-medium whitespace-nowrap">السجلات</button>
+        <button onclick="switchTab('code')" id="tabCode" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">تعديل الكود</button>
+        <button onclick="switchTab('webhook')" id="tabWebhook" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">Webhook</button>
+        <button onclick="switchTab('settings')" id="tabSettings" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">الإعدادات</button>
+        <button onclick="deleteBot()" class="px-6 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 whitespace-nowrap mr-auto">حذف</button>
+      </div>
+
+      <!-- Tab: Logs -->
+      <div id="panelLogs">
+        <div class="flex items-center justify-between px-4 py-2 bg-gray-900/30">
+          <span class="text-xs text-gray-500">السجلات المباشرة — يتم التحديث تلقائياً</span>
+          <span id="liveIndicator" class="flex items-center gap-1.5 text-xs text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> مباشر
+          </span>
+        </div>
+        <div id="logConsole" class="console h-96 overflow-y-auto p-4 text-gray-300 whitespace-pre-wrap break-all">
+          <span class="text-gray-600">// السجلات ستظهر هنا عند تشغيل البوت ...</span>
+        </div>
+      </div>
+
+      <!-- Tab: Code -->
+      <div id="panelCode" class="hidden p-4 space-y-4">
+        <textarea id="editCode" rows="14" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y"></textarea>
+        <div id="reqSection">
+          <label class="block text-sm font-medium text-gray-300 mb-2">المتطلبات</label>
+          <textarea id="editRequirements" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 focus:border-blue-500 focus:outline-none resize-y"></textarea>
+        </div>
+        <div id="editError" class="text-red-400 text-sm hidden"></div>
+        <button onclick="saveCode()" class="btn-primary px-6 py-2.5 rounded-xl text-white text-sm font-medium">حفظ</button>
+      </div>
+
+      <!-- Tab: Webhook -->
+      <div id="panelWebhook" class="hidden p-6 space-y-6">
+        <div class="card p-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-bold text-white mb-1">Webhook</h3>
+              <p class="text-sm text-gray-400">استقبل طلبات HTTP مباشرة إلى بوتك</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="webhookToggle" onchange="toggleWebhook()" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          <div id="webhookUrlSection" class="hidden mt-4">
+            <label class="block text-sm font-medium text-gray-300 mb-2">رابط Webhook</label>
+            <div class="flex gap-2">
+              <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 text-sm" value="https://wolf-host.pages.dev/api/webhook/">
+              <button onclick="copyWebhookUrl()" class="btn-primary px-4 py-2 rounded-xl text-white text-sm">نسخ</button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">أرسل طلبات HTTP إلى هذا الرابط مع هيدر <code class="text-yellow-400">X-Bot-Slug</code></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Settings -->
+      <div id="panelSettings" class="hidden p-6 space-y-6">
+        <div class="card p-5">
+          <h3 class="text-lg font-bold text-white mb-4">معلومات البوت</h3>
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div><span class="text-gray-500">المعرف:</span> <span id="infoId" class="text-gray-300 font-mono"></span></div>
+            <div><span class="text-gray-500">الاسم:</span> <span id="infoName" class="text-gray-300"></span></div>
+            <div><span class="text-gray-500">Slug:</span> <span id="infoSlug" class="text-gray-300 font-mono"></span></div>
+            <div><span class="text-gray-500">النوع:</span> <span id="infoType" class="text-gray-300"></span></div>
+            <div><span class="text-gray-500">Container ID:</span> <span id="infoContainer" class="text-gray-300 font-mono"></span></div>
+            <div><span class="text-gray-500">تاريخ الإنشاء:</span> <span id="infoCreated" class="text-gray-300"></span></div>
+          </div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-lg font-bold text-white mb-2">الترويج 🐺</h3>
+          <p class="text-sm text-gray-400 mb-4">ساهم في نشر المنصة ليستفيد الجميع</p>
+          <div class="flex flex-wrap gap-3 text-sm">
+            <a href="https://t.me/j49_c" target="_blank" class="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition">@j49_c</a>
+            <a href="https://t.me/O5O6J" target="_blank" class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition">@O5O6J</a>
+            <a href="https://x.com/wolfhost_1" target="_blank" class="px-4 py-2 rounded-xl bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition">@wolfhost_1</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    const WS_BASE = API.replace(/^http/, 'ws');
+    const botId = parseInt(window.location.pathname.split('/').pop());
+    let token = localStorage.getItem('token');
+    let ws = null;
+    let resourceInterval = null;
+    let statusInterval = null;
+
+    if (!token) { window.location.href = '/login'; }
+
+    function getHeaders() {
+      return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    async function loadBot() {
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
+        if (res.status === 404) { document.getElementById('botName').textContent = 'البوت غير موجود'; return; }
+        const bot = await res.json();
+
+        document.getElementById('botName').textContent = bot.name;
+        document.getElementById('botType').textContent = bot.bot_type === 'python' ? 'بوت بايثون' : 'سكربت PHP';
+        document.getElementById('editCode').value = bot.main_file || '';
+        document.getElementById('editRequirements').value = bot.requirements || '';
+        document.getElementById('webhookToggle').checked = bot.webhook_active || false;
+        document.getElementById('webhookUrlSection').classList.toggle('hidden', !bot.webhook_active);
+        if (bot.webhook_active && bot.webhook_url) {
+          document.getElementById('webhookUrl').value = `${API}${bot.webhook_url}`;
+        }
+
+        document.getElementById('infoId').textContent = bot.id;
+        document.getElementById('infoName').textContent = bot.name;
+        document.getElementById('infoSlug').textContent = bot.slug;
+        document.getElementById('infoType').textContent = bot.bot_type;
+        document.getElementById('infoContainer').textContent = bot.container_id || '—';
+        document.getElementById('infoCreated').textContent = bot.created_at ? new Date(bot.created_at).toLocaleDateString('ar-SA') : '—';
+        document.getElementById('restartsDisplay').textContent = bot.restart_count || 0;
+
+        if (bot.bot_type === 'php') {
+          document.getElementById('reqSection').classList.add('hidden');
+        } else {
+          document.getElementById('reqSection').classList.remove('hidden');
+        }
+
+        updateStatus(bot.status, bot.resource_usage);
+
+        statusInterval = setInterval(() => refreshStatus(), 3000);
+        resourceInterval = setInterval(() => refreshResources(), 5000);
+
+        switchTab('logs');
+        connectLogs();
+      } catch (e) {
+        document.getElementById('botName').textContent = 'خطأ في التحميل';
+      }
+    }
+
+    async function refreshStatus() {
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
+        const bot = await res.json();
+        updateStatus(bot.status, bot.resource_usage);
+      } catch (e) {}
+    }
+
+    async function refreshResources() {
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
+        const bot = await res.json();
+        const usage = bot.resource_usage || {};
+        document.getElementById('cpuDisplay').textContent = (usage.cpu || 0) + '%';
+        document.getElementById('ramDisplay').textContent = (usage.memory_mb || 0) + ' MB';
+        document.getElementById('restartsDisplay').textContent = bot.restart_count || 0;
+      } catch (e) {}
+    }
+
+    function updateStatus(status, usage) {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      dot.className = 'status-dot ' + status;
+      const labels = { running: 'يعمل', stopped: 'متوقف', crashed: 'معطل' };
+      text.textContent = labels[status] || status;
+      if (usage) {
+        document.getElementById('cpuDisplay').textContent = (usage.cpu || 0) + '%';
+        document.getElementById('ramDisplay').textContent = (usage.memory_mb || 0) + ' MB';
+      }
+    }
+
+    async function controlBot(action) {
+      try {
+        await fetch(`${API}/api/bots/${botId}/${action}`, { method: 'POST', headers: getHeaders() });
+        setTimeout(() => refreshStatus(), 500);
+        if (action === 'start') setTimeout(() => connectLogs(), 300);
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveCode() {
+      const code = document.getElementById('editCode').value;
+      const reqs = document.getElementById('editRequirements').value;
+      const errEl = document.getElementById('editError');
+      errEl.classList.add('hidden');
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}/code`, {
+          method: 'PUT', headers: getHeaders(),
+          body: JSON.stringify({ main_file: code, requirements: reqs }),
+        });
+        if (!res.ok) { const d = await res.json(); errEl.textContent = d.detail || 'فشل'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ'; errEl.classList.remove('hidden'); }
+    }
+
+    async function toggleWebhook() {
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}/webhook`, { method: 'PUT', headers: getHeaders() });
+        const data = await res.json();
+        document.getElementById('webhookToggle').checked = data.webhook_active;
+        document.getElementById('webhookUrlSection').classList.toggle('hidden', !data.webhook_active);
+      } catch (e) { console.error(e); }
+    }
+
+    function copyWebhookUrl() {
+      const url = document.getElementById('webhookUrl');
+      url.select();
+      navigator.clipboard.writeText(url.value);
+    }
+
+    async function deleteBot() {
+      if (!confirm('هل أنت متأكد من حذف هذا البوت؟')) return;
+      try {
+        await fetch(`${API}/api/bots/${botId}`, { method: 'DELETE', headers: getHeaders() });
+        if (ws) ws.close();
+        window.location.href = '/dashboard';
+      } catch (e) { console.error(e); }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('[id^="panel"]').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('[id^="tab"]').forEach(t => { t.classList.remove('tab-active'); t.classList.add('text-gray-500'); });
+      document.getElementById(`panel${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.remove('hidden');
+      const tabEl = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+      tabEl.classList.add('tab-active');
+      tabEl.classList.remove('text-gray-500');
+      if (tab === 'logs') connectLogs();
+    }
+
+    function connectLogs() {
+      if (ws) { ws.close(); ws = null; }
+      const console = document.getElementById('logConsole');
+      console.innerHTML = '<span class="text-gray-600">// جاري الاتصال...</span>';
+      document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> متصل...';
+
+      ws = new WebSocket(`${WS_BASE}/api/logs/ws/${botId}?token=${token}`);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'log') {
+            if (console.innerHTML === '<span class="text-gray-600">// جاري الاتصال...</span>') console.innerHTML = '';
+            console.innerHTML += msg.data.replace(/\n/g, '<br>');
+            console.scrollTop = console.scrollHeight;
+          } else if (msg.type === 'status' && msg.data === 'stopped') {
+            console.innerHTML += '\n<span class="text-red-400">// البوت متوقف</span>\n';
+          }
+        } catch (e) {}
+      };
+      ws.onopen = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> مباشر'; };
+      ws.onclose = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-gray-500"></span> غير متصل'; };
+      ws.onerror = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> خطأ'; };
+    }
+
+    document.addEventListener('DOMContentLoaded', loadBot);
+  </script>
+</body>
+</html>

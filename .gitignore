@@ -5,3 +5,4 @@ __pycache__/
 user_data/
 *.log
 .DS_Store
+/شعار*.jpg

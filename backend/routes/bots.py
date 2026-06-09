@@ -1,6 +1,10 @@
 import re
+import shutil
 import unicodedata
-from fastapi import APIRouter, Depends, HTTPException
+import zipfile
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -10,12 +14,15 @@ from models.database import get_session
 from models.bot import Bot
 from models.user import User
 from services.auth_service import AuthService
-from services.container_manager import ContainerManager
+from services.container_manager import ContainerManager, BOTS_DIR
 
 router = APIRouter(prefix="/api/bots", tags=["Bot Management"])
 
+ALLOWED_UPLOAD_EXTS = {".py", ".php", ".zip"}
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
-class CreateBotRequest(BaseModel):
+
+class CreateBotCode(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     bot_type: str = Field(..., pattern="^(python|php)$")
     main_file: str = Field(..., min_length=1)
@@ -48,6 +55,28 @@ async def _unique_slug(session: AsyncSession, base_slug: str, user_id: int) -> s
         counter += 1
 
 
+def _allowed_file(filename: str) -> bool:
+    return Path(filename).suffix.lower() in ALLOWED_UPLOAD_EXTS
+
+
+def _sanitize_zip(zip_path: Path) -> list[str]:
+    extracted = []
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            fname = info.filename
+            if ".." in fname or fname.startswith("/"):
+                raise HTTPException(status_code=400, detail=f"不安全路径 في الملف المضغوط: {fname}")
+            ext = Path(fname).suffix.lower()
+            if ext not in ALLOWED_UPLOAD_EXTS and ext != ".txt":
+                raise HTTPException(status_code=400, detail=f"امتداد غير مسموح: {fname}")
+            if info.file_size > MAX_FILE_SIZE:
+                raise HTTPException(status_code=400, detail=f"ملف كبير جداً: {fname}")
+            extracted.append(fname)
+    return extracted
+
+
 @router.get("/")
 async def list_bots(
     user: User = Depends(AuthService.get_current_user),
@@ -64,15 +93,17 @@ async def list_bots(
             "slug": b.slug,
             "bot_type": b.bot_type,
             "status": ContainerManager.get_status(b.container_id) if b.container_id else b.status,
+            "is_upload": b.is_upload or False,
+            "webhook_active": b.webhook_active or False,
             "created_at": b.created_at.isoformat() if b.created_at else None,
         }
         for b in bots
     ]
 
 
-@router.post("/")
-async def create_bot(
-    req: CreateBotRequest,
+@router.post("/code")
+async def create_bot_code(
+    req: CreateBotCode,
     user: User = Depends(AuthService.get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -82,7 +113,7 @@ async def create_bot(
     if count_result.scalar() >= settings.max_bots_per_user:
         raise HTTPException(
             status_code=429,
-            detail=f"Maximum {settings.max_bots_per_user} bots allowed on free tier",
+            detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
         )
 
     base_slug = _slugify(req.name)
@@ -94,7 +125,8 @@ async def create_bot(
         slug=slug,
         bot_type=req.bot_type,
         main_file=req.main_file,
-        requirements=req.requirements,
+        requirements=req.requirements if req.bot_type == "python" else "",
+        is_upload=False,
     )
     session.add(bot)
     await session.commit()
@@ -105,6 +137,85 @@ async def create_bot(
         "slug": bot.slug,
         "bot_type": bot.bot_type,
         "status": "created",
+        "webhook_url": f"https://{settings.domain}/api/webhook/",
+    }
+
+
+@router.post("/upload")
+async def create_bot_upload(
+    name: str = Form(...),
+    bot_type: str = Form(...),
+    file: UploadFile = File(...),
+    user: User = Depends(AuthService.get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    count_result = await session.execute(
+        select(func.count()).select_from(Bot).where(Bot.user_id == user.id)
+    )
+    if count_result.scalar() >= settings.max_bots_per_user:
+        raise HTTPException(
+            status_code=429,
+            detail=f"الحد الأقصى {settings.max_bots_per_user} بوتات لكل مستخدم",
+        )
+
+    if not _allowed_file(file.filename):
+        raise HTTPException(status_code=400, detail="الامتداد غير مسموح. فقط .py, .php, .zip")
+
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE * 2:
+        raise HTTPException(status_code=400, detail="حجم الملف كبير جداً")
+
+    base_slug = _slugify(name)
+    slug = await _unique_slug(session, base_slug, user.id)
+    work_dir = BOTS_DIR / str(user.id)
+
+    ext = Path(file.filename).suffix.lower()
+
+    if ext == ".zip":
+        extract_dir = work_dir / slug
+        if extract_dir.exists():
+            shutil.rmtree(extract_dir)
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        zip_path = work_dir / f"{slug}_upload.zip"
+        zip_path.write_bytes(contents)
+        try:
+            extracted = _sanitize_zip(zip_path)
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                for fname in extracted:
+                    zf.extract(fname, extract_dir)
+        finally:
+            zip_path.unlink(missing_ok=True)
+        bot = Bot(
+            user_id=user.id,
+            name=name.strip(),
+            slug=slug,
+            bot_type=bot_type,
+            is_upload=True,
+            upload_path=str(extract_dir),
+        )
+    else:
+        bot_file_path = work_dir / slug / file.filename
+        bot_file_path.parent.mkdir(parents=True, exist_ok=True)
+        bot_file_path.write_bytes(contents)
+        bot = Bot(
+            user_id=user.id,
+            name=name.strip(),
+            slug=slug,
+            bot_type=bot_type,
+            is_upload=True,
+            upload_path=str(bot_file_path),
+        )
+
+    session.add(bot)
+    await session.commit()
+    await session.refresh(bot)
+    return {
+        "id": bot.id,
+        "name": bot.name,
+        "slug": bot.slug,
+        "bot_type": bot.bot_type,
+        "status": "created",
+        "is_upload": True,
         "webhook_url": f"https://{settings.domain}/api/webhook/",
     }
 
@@ -131,10 +242,13 @@ async def get_bot(
         "container_id": bot.container_id,
         "main_file": bot.main_file,
         "requirements": bot.requirements,
+        "is_upload": bot.is_upload or False,
+        "upload_path": bot.upload_path,
+        "webhook_url": bot.webhook_url or f"https://{settings.domain}/api/webhook/",
+        "webhook_active": bot.webhook_active or False,
         "restart_count": bot.restart_count,
         "created_at": bot.created_at.isoformat() if bot.created_at else None,
         "resource_usage": usage,
-        "webhook_url": f"https://{settings.domain}/api/webhook/",
     }
 
 
@@ -158,6 +272,7 @@ async def start_bot(
         bot_type=bot.bot_type,
         main_file_content=bot.main_file or "",
         requirements=bot.requirements or "",
+        is_upload=bot.is_upload or False,
     )
 
     if outcome["status"] == "success":
@@ -214,6 +329,7 @@ async def restart_bot(
         bot_type=bot.bot_type,
         main_file_content=bot.main_file or "",
         requirements=bot.requirements or "",
+        is_upload=bot.is_upload or False,
     )
 
     if outcome["status"] == "success":
@@ -242,7 +358,26 @@ async def update_code(
     bot.main_file = req.main_file
     bot.requirements = req.requirements
     await session.commit()
-    return {"status": "success", "message": "Code updated — restart bot to apply changes"}
+    return {"status": "success", "message": "تم تحديث الكود — أعد تشغيل البوت لتطبيق التغييرات"}
+
+
+@router.put("/{bot_id}/webhook")
+async def update_webhook(
+    bot_id: int,
+    user: User = Depends(AuthService.get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
+    )
+    bot = result.scalar_one_or_none()
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+
+    bot.webhook_active = not bot.webhook_active
+    bot.webhook_url = f"/api/webhook/" if bot.webhook_active else None
+    await session.commit()
+    return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url}
 
 
 @router.delete("/{bot_id}")
@@ -262,4 +397,4 @@ async def delete_bot(
         await ContainerManager.stop_bot(bot.container_id)
     await session.delete(bot)
     await session.commit()
-    return {"status": "success", "message": "Bot deleted"}
+    return {"status": "success", "message": "تم حذف البوت"}

@@ -32,3 +32,8 @@ async def register_page():
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page():
     return _render_html("dashboard.html")
+
+
+@router.get("/bot/{bot_id}", response_class=HTMLResponse)
+async def bot_control_page(bot_id: int):
+    return _render_html("bot_control.html")

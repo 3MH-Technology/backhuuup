@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, func
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -15,7 +15,14 @@ class Bot(Base):
     container_id = Column(String(64), nullable=True, index=True)
     main_file = Column(Text, nullable=True)
     requirements = Column(Text, nullable=True)
-    restart_count = Column(Integer, default=0)  # self-healing counter
+
+    is_upload = Column(Boolean, default=False)
+    upload_path = Column(String(512), nullable=True)
+
+    webhook_url = Column(String(512), nullable=True)
+    webhook_active = Column(Boolean, default=False)
+
+    restart_count = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

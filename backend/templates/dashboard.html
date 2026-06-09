@@ -3,369 +3,312 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wolf Host — استضافة الذب هوست | لوحة التحكم</title>
+  <title>Wolf Host — لوحة التحكم</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['"Tajawal"', 'system-ui', 'sans-serif'] },
-          animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
-        }
-      }
-    }
-  </script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Tajawal', system-ui, sans-serif; }
     .bg-app { background: linear-gradient(135deg, #0a0f1e 0%, #111827 50%, #0a0f1e 100%); }
     .card { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; transition: all .2s; }
     .card:hover { border-color: rgba(255,255,255,0.12); }
-    .btn-primary { background: linear-gradient(135deg, #2563eb, #7c3aed); transition: all .2s; }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px -5px rgba(37,99,235,0.4); }
-    .btn-danger { background: linear-gradient(135deg, #dc2626, #db2777); }
-    .btn-danger:hover { box-shadow: 0 8px 25px -5px rgba(220,38,38,0.4); }
-    .btn-success { background: linear-gradient(135deg, #059669, #0d9488); }
-    .btn-success:hover { box-shadow: 0 8px 25px -5px rgba(5,150,105,0.4); }
-    .console { background: #0a0a0f; font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; line-height: 1.6; }
-    .console::-webkit-scrollbar { width: 6px; }
-    .console::-webkit-scrollbar-track { background: transparent; }
-    .console::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    .btn-python { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+    .btn-python:hover { box-shadow: 0 8px 25px -5px rgba(37,99,235,0.4); transform: translateY(-1px); }
+    .btn-php { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+    .btn-php:hover { box-shadow: 0 8px 25px -5px rgba(124,58,237,0.4); transform: translateY(-1px); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .status-dot.running { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
     .status-dot.stopped { background: #6b7280; }
     .status-dot.crashed { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
-    .code-area { font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; direction: ltr; text-align: left; }
-    .sidebar { min-width: 280px; }
-    @media (max-width: 768px) { .sidebar { min-width: 100%; } }
     .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; }
-    .slide-up { animation: slideUp .3s ease; }
+    .code-area { font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; direction: ltr; text-align: left; }
     @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-up { animation: slideUp .3s ease; }
+    .glow-text { text-shadow: 0 0 40px rgba(59,130,246,0.3); }
   </style>
 </head>
 <body class="bg-app text-gray-100 min-h-screen">
-  <div class="flex h-screen overflow-hidden">
 
-    <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar hidden md:flex flex-col bg-black/30 border-l border-gray-800/50 p-4 overflow-y-auto">
-      <div class="flex items-center gap-3 mb-8 px-2">
-        <div class="w-11 h-11 bg-gradient-to-br from-blue-600 to-purple-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-        </div>
+  <!-- Top Bar -->
+  <header class="bg-black/30 border-b border-gray-800/50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/static/logo.jpg" alt="Wolf Host" class="w-10 h-10 rounded-xl object-cover border border-gray-700/50">
         <div>
-          <h1 class="text-lg font-black text-white">Wolf Host</h1>
+          <h1 class="text-lg font-black text-white glow-text">Wolf Host</h1>
           <p class="text-xs text-gray-500">استضافة الذب هوست</p>
         </div>
       </div>
+      <div class="flex items-center gap-4">
+        <span id="usernameDisplay" class="text-sm text-gray-400 hidden md:inline"></span>
+        <button onclick="logout()" class="text-sm text-gray-500 hover:text-red-400 transition">خروج</button>
+      </div>
+    </div>
+  </header>
 
-      <div class="px-2 mb-4">
-        <div id="userInfo" class="flex items-center gap-2 text-sm text-gray-400">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-          <span id="usernameDisplay">—</span>
+  <div class="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Main Navigation Tabs -->
+    <div class="flex gap-2 border-b border-gray-800/50 pb-2 overflow-x-auto">
+      <button onclick="showSection('bots')" id="navBots" class="px-5 py-2 rounded-xl bg-blue-600/20 text-blue-400 font-medium text-sm whitespace-nowrap">بوتاتي</button>
+      <button onclick="showSection('create-python')" id="navPython" class="px-5 py-2 rounded-xl text-gray-400 hover:bg-white/5 text-sm whitespace-nowrap">بوت بايثون جديد</button>
+      <button onclick="showSection('create-php')" id="navPhp" class="px-5 py-2 rounded-xl text-gray-400 hover:bg-white/5 text-sm whitespace-nowrap">بوت PHP جديد</button>
+    </div>
+
+    <!-- Section: Bots List -->
+    <section id="section-bots" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-white">بوتاتي</h2>
+          <p class="text-gray-500 text-sm">جميع البوتات المستضافة — اضغط على أي بوت للتحكم به</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="showSection('create-python')" class="btn-python px-4 py-2 rounded-xl text-white text-sm font-medium">+ بايثون</button>
+          <button onclick="showSection('create-php')" class="btn-php px-4 py-2 rounded-xl text-white text-sm font-medium">+ PHP</button>
         </div>
       </div>
 
-      <nav class="space-y-1 px-2 flex-1">
-        <button onclick="showSection('bots')" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-blue-600/20 text-blue-400 font-medium">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-          بوتاتي
-        </button>
-        <button onclick="showSection('newbot')" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-          بوت جديد
-        </button>
-      </nav>
-
-      <!-- Branding Footer -->
-      <div class="px-2 mt-auto pt-4 border-t border-gray-800/50 space-y-3">
-        <div class="text-xs text-gray-600 text-center space-y-1">
-          <p>مبني بـ ❤️ بواسطة <span class="text-gray-400 font-bold">الذئب الأبيض 🐺</span></p>
-          <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2">
-            <a href="https://t.me/j49_c" target="_blank" class="hover:text-blue-400 transition">@j49_c</a>
-            <a href="https://t.me/O5O6J" target="_blank" class="hover:text-blue-400 transition">@O5O6J</a>
-            <a href="https://x.com/wolfhost_1" target="_blank" class="hover:text-blue-400 transition">@wolfhost_1</a>
+      <div id="botsGrid" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div id="noBotsMsg" class="col-span-full card p-12 text-center hidden">
+          <img src="/static/logo.jpg" class="w-20 h-20 mx-auto rounded-2xl mb-4 opacity-50">
+          <h3 class="text-xl font-bold text-gray-400 mb-2">لا يوجد بوتات بعد</h3>
+          <p class="text-gray-600 mb-6">أنشئ أول بوت لك الآن وابدأ في نشر خدماتك 🚀</p>
+          <div class="flex gap-3 justify-center">
+            <button onclick="showSection('create-python')" class="btn-python px-6 py-3 rounded-xl text-white font-medium">بوت بايثون</button>
+            <button onclick="showSection('create-php')" class="btn-php px-6 py-3 rounded-xl text-white font-medium">بوت PHP</button>
           </div>
         </div>
-        <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-500 hover:bg-red-500/10 hover:text-red-400 transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          تسجيل خروج
-        </button>
       </div>
-    </aside>
 
-    <!-- ===== MAIN CONTENT ===== -->
-    <main class="flex-1 flex flex-col overflow-hidden">
-
-      <!-- Mobile Header -->
-      <header class="md:hidden flex items-center justify-between p-4 bg-black/20 border-b border-gray-800/50">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          </div>
-          <span class="font-black">Wolf Host</span>
+      <!-- Promo Card -->
+      <div class="card p-5 flex items-center gap-4">
+        <img src="/static/logo.jpg" class="w-12 h-12 rounded-xl object-cover">
+        <div class="text-sm text-gray-400 flex-1">
+          <strong class="text-white">Wolf Host</strong> — منصة استضافة البوتات المجانية. كل بوت يحصل على <strong class="text-emerald-400">128MB RAM</strong> و <strong class="text-emerald-400">0.5 CPU</strong>. حد <strong class="text-blue-400">3 بوتات</strong> لكل مستخدم.
         </div>
-        <button id="menuToggle" class="text-gray-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-      </header>
+        <div class="hidden md:flex gap-2 text-xs">
+          <a href="https://t.me/j49_c" target="_blank" class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition">@j49_c</a>
+          <a href="https://t.me/O5O6J" target="_blank" class="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition">@O5O6J</a>
+          <a href="https://x.com/wolfhost_1" target="_blank" class="px-3 py-1.5 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700 transition">@wolfhost_1</a>
+        </div>
+      </div>
+    </section>
 
-      <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+    <!-- Section: Create Python Bot -->
+    <section id="section-create-python" class="hidden space-y-4">
+      <button onclick="showSection('bots')" class="text-gray-400 hover:text-white text-sm flex items-center gap-1">
+        <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        العودة
+      </button>
+      <h2 class="text-2xl font-bold text-white">بوت بايثون جديد</h2>
+      <p class="text-gray-500 text-sm">ارفع كود بايثون أو ملف مضغوط — مناسب لبوتات التيليجرام والسكربتات</p>
 
-        <!-- ==================== BOTS LIST ==================== -->
-        <section id="section-bots" class="space-y-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-2xl font-bold text-white">بوتاتي</h2>
-              <p class="text-gray-500 text-sm">جميع البوتات المستضافة الخاصة بك</p>
-            </div>
-            <button onclick="showSection('newbot')" class="btn-primary px-5 py-2.5 rounded-xl text-white text-sm font-medium flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-              بوت جديد
-            </button>
-          </div>
+      <!-- Code / Upload Tabs for Python -->
+      <div class="flex gap-2 mb-2">
+        <button onclick="switchCreateMode('python', 'code')" id="pyModeCode" class="tab-active px-4 py-2 text-sm font-medium rounded-xl">كتابة كود</button>
+        <button onclick="switchCreateMode('python', 'upload')" id="pyModeUpload" class="px-4 py-2 text-sm font-medium text-gray-500 rounded-xl hover:bg-white/5">رفع ملف</button>
+      </div>
 
-          <div id="botsGrid" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div id="noBotsMsg" class="col-span-full card p-12 text-center hidden">
-              <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              <h3 class="text-xl font-bold text-gray-400 mb-2">لا يوجد بوتات بعد</h3>
-              <p class="text-gray-600 mb-6">قم بإنشاء أول بوت لك الآن 🚀</p>
-              <button onclick="showSection('newbot')" class="btn-primary px-6 py-3 rounded-xl text-white font-medium">إنشاء بوت</button>
-            </div>
-          </div>
-
-          <div class="card p-5 flex items-center gap-4">
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            </div>
-            <div class="text-sm text-gray-400">
-              كل بوت يحصل على <strong class="text-gray-200">128MB RAM</strong> و <strong class="text-gray-200">0.5 CPU</strong> كحد أقصى. حد <strong class="text-gray-200">3 بوتات</strong> لكل مستخدم. مجاني تماماً ✨
-            </div>
-          </div>
-        </section>
-
-        <!-- ==================== NEW BOT ==================== -->
-        <section id="section-newbot" class="hidden space-y-6">
-          <div>
-            <button onclick="showSection('bots')" class="text-gray-400 hover:text-white text-sm flex items-center gap-1 mb-4">
-              <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-              العودة للبوتات
-            </button>
-            <h2 class="text-2xl font-bold text-white">بوت جديد</h2>
-            <p class="text-gray-500 text-sm">انشر بوت تيليجرام أو سكربت PHP جديد — مجاني 100%</p>
-          </div>
-
-          <div class="card p-6 space-y-6">
+      <div class="card p-6">
+        <!-- Python: Write Code -->
+        <div id="pyCreateCode">
+          <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
-              <input type="text" id="newBotName" maxlength="100"
-                class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-                placeholder="my-telegram-bot">
+              <input type="text" id="pyName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none" placeholder="my-telegram-bot">
             </div>
-
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-3">نوع البوت</label>
-              <div class="flex gap-3">
-                <label class="flex-1 cursor-pointer">
-                  <input type="radio" name="botType" value="python" checked class="peer sr-only">
-                  <div class="p-4 rounded-xl border border-gray-700/50 bg-gray-800/30 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 transition text-center">
-                    <svg class="w-8 h-8 mx-auto mb-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-                    <div class="font-medium text-sm">Python</div>
-                    <div class="text-xs text-gray-500">بوت تيليجرام</div>
-                  </div>
-                </label>
-                <label class="flex-1 cursor-pointer">
-                  <input type="radio" name="botType" value="php" class="peer sr-only">
-                  <div class="p-4 rounded-xl border border-gray-700/50 bg-gray-800/30 peer-checked:border-purple-500 peer-checked:bg-purple-500/10 transition text-center">
-                    <svg class="w-8 h-8 mx-auto mb-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                    <div class="font-medium text-sm">PHP</div>
-                    <div class="text-xs text-gray-500">سكربت أو Webhook</div>
-                  </div>
-                </label>
-              </div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">الكود</label>
+              <textarea id="pyCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="# كود البوت هنا...&#10;import telebot&#10;bot = telebot.TeleBot('TOKEN')&#10;@bot.message_handler(commands=['start'])&#10;def start(msg):&#10;    bot.reply_to(msg, 'مرحباً!')&#10;bot.polling()"></textarea>
             </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">الكود المصدري</label>
-              <textarea id="newBotCode" rows="12" spellcheck="false"
-                class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y"
-                placeholder="# اكتب كود البوت هنا...&#10;import telebot&#10;&#10;bot = telebot.TeleBot('YOUR_TOKEN')&#10;@bot.message_handler(commands=['start'])&#10;def start(msg):&#10;    bot.reply_to(msg, 'مرحباً بك!')&#10;&#10;bot.polling()"></textarea>
-            </div>
-
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">المتطلبات (requirements.txt)</label>
-              <textarea id="newBotRequirements" rows="3" spellcheck="false"
-                class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y"
-                placeholder="pyTelegramBotAPI&#10;requests&#10;python-dotenv"></textarea>
+              <textarea id="pyReqs" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="pyTelegramBotAPI&#10;requests"></textarea>
             </div>
-
-            <div id="newBotError" class="text-red-400 text-sm hidden"></div>
-
-            <button onclick="createBot()" class="btn-primary w-full py-3.5 rounded-xl text-white font-bold text-lg">
-              انشر البوت 🚀
-            </button>
-          </div>
-        </section>
-
-        <!-- ==================== BOT DETAIL ==================== -->
-        <section id="section-detail" class="hidden space-y-6">
-          <div>
-            <button onclick="showSection('bots')" class="text-gray-400 hover:text-white text-sm flex items-center gap-1 mb-4">
-              <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-              العودة للبوتات
-            </button>
-          </div>
-
-          <div class="card p-6">
-            <div class="flex items-start justify-between flex-wrap gap-4">
-              <div class="flex items-center gap-4">
-                <div id="detailIcon" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                </div>
-                <div>
-                  <h2 id="detailName" class="text-xl font-bold text-white">—</h2>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span id="detailStatusDot" class="status-dot stopped"></span>
-                    <span id="detailStatus" class="text-sm text-gray-400">متوقف</span>
-                    <span class="text-gray-600 mx-1">·</span>
-                    <span id="detailType" class="text-sm text-gray-500">python</span>
-                  </div>
-                </div>
-              </div>
-              <div class="flex gap-2 flex-wrap">
-                <button id="btnStart" onclick="controlBot('start')" class="btn-success px-4 py-2 rounded-xl text-white text-sm font-medium">تشغيل</button>
-                <button id="btnStop" onclick="controlBot('stop')" class="btn-danger px-4 py-2 rounded-xl text-white text-sm font-medium">إيقاف</button>
-                <button id="btnRestart" onclick="controlBot('restart')" class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition">إعادة تشغيل</button>
-                <button onclick="deleteCurrentBot()" class="px-4 py-2 rounded-xl text-red-400 hover:bg-red-500/10 text-sm transition">حذف</button>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4 mt-6">
-              <div class="bg-gray-800/30 rounded-xl p-4 text-center">
-                <div class="text-2xl font-bold text-emerald-400" id="detailCpu">0%</div>
-                <div class="text-xs text-gray-500 mt-1">المعالج (CPU)</div>
-              </div>
-              <div class="bg-gray-800/30 rounded-xl p-4 text-center">
-                <div class="text-2xl font-bold text-blue-400" id="detailRam">0 MB</div>
-                <div class="text-xs text-gray-500 mt-1">الذاكرة (RAM)</div>
-              </div>
-              <div class="bg-gray-800/30 rounded-xl p-4 text-center">
-                <div class="text-2xl font-bold text-purple-400" id="detailStatusText">—</div>
-                <div class="text-xs text-gray-500 mt-1">الحالة</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card overflow-hidden">
-            <div class="flex border-b border-gray-800/50">
-              <button onclick="switchDetailTab('logs')" id="tabLogs" class="tab-active px-6 py-3 text-sm font-medium transition">السجلات المباشرة</button>
-              <button onclick="switchDetailTab('code')" id="tabCode" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 transition">تعديل الكود</button>
-            </div>
-
-            <div id="panelLogs">
-              <div class="flex items-center justify-between px-4 py-2 bg-gray-900/30">
-                <span class="text-xs text-gray-500">السجلات المباشرة — يتم التحديث تلقائياً</span>
-                <span id="liveIndicator" class="flex items-center gap-1.5 text-xs text-emerald-400">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-slow"></span> مباشر
-                </span>
-              </div>
-              <div id="logConsole" class="console h-80 overflow-y-auto p-4 text-gray-300 whitespace-pre-wrap break-all">
-                <span class="text-gray-600">// السجلات ستظهر هنا عند تشغيل البوت ...</span>
-              </div>
-            </div>
-
-            <div id="panelCode" class="hidden">
-              <div class="p-4 space-y-4">
-                <textarea id="editCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y"></textarea>
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">المتطلبات</label>
-                  <textarea id="editRequirements" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 focus:border-blue-500 focus:outline-none resize-y"></textarea>
-                </div>
-                <div id="editError" class="text-red-400 text-sm hidden"></div>
-                <button onclick="saveCode()" class="btn-primary px-6 py-2.5 rounded-xl text-white text-sm font-medium">حفظ التغييرات</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-      </div>
-
-      <!-- Footer branding bar -->
-      <footer class="hidden md:flex items-center justify-between px-6 py-2 bg-black/20 border-t border-gray-800/50 text-xs text-gray-600">
-        <span>Wolf Host — استضافة الذب هوست 🐺 | Developer: الذئب الأبيض 🐺</span>
-        <div class="flex items-center gap-3">
-          <a href="https://t.me/j49_c" target="_blank" class="hover:text-blue-400 transition">@j49_c</a>
-          <a href="https://t.me/O5O6J" target="_blank" class="hover:text-blue-400 transition">@O5O6J</a>
-          <a href="https://x.com/wolfhost_1" target="_blank" class="hover:text-blue-400 transition">@wolfhost_1</a>
-        </div>
-      </footer>
-    </main>
-  </div>
-
-  <!-- Mobile Menu -->
-  <div id="mobileMenu" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/60" onclick="toggleMobileMenu()"></div>
-    <div class="absolute top-0 right-0 w-72 h-full bg-gray-900/95 backdrop-blur-xl p-6 shadow-2xl">
-      <div class="flex justify-between items-center mb-8">
-        <span class="font-bold text-lg">Wolf Host</span>
-        <button onclick="toggleMobileMenu()" class="text-gray-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-      </div>
-      <nav class="space-y-2">
-        <button onclick="showSection('bots'); toggleMobileMenu();" class="w-full text-right px-4 py-3 rounded-xl bg-blue-600/20 text-blue-400 font-medium">بوتاتي</button>
-        <button onclick="showSection('newbot'); toggleMobileMenu();" class="w-full text-right px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5">بوت جديد</button>
-        <hr class="border-gray-800 my-4">
-        <div class="text-xs text-gray-600 text-center py-4 space-y-2">
-          <p>Developer: الذئب الأبيض 🐺</p>
-          <div class="flex flex-col gap-1">
-            <a href="https://t.me/j49_c" target="_blank" class="hover:text-blue-400 transition">تيليجرام: @j49_c</a>
-            <a href="https://t.me/O5O6J" target="_blank" class="hover:text-blue-400 transition">القناة: @O5O6J</a>
-            <a href="https://x.com/wolfhost_1" target="_blank" class="hover:text-blue-400 transition">إكس: @wolfhost_1</a>
+            <div id="pyCodeError" class="text-red-400 text-sm hidden"></div>
+            <button onclick="createPythonCode()" class="btn-python w-full py-3 rounded-xl text-white font-bold">انشر البوت 🚀</button>
           </div>
         </div>
-        <hr class="border-gray-800 my-4">
-        <button onclick="logout()" class="w-full text-right px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10">تسجيل خروج</button>
-      </nav>
-    </div>
+
+        <!-- Python: Upload File -->
+        <div id="pyCreateUpload" class="hidden">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
+              <input type="text" id="pyUploadName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none" placeholder="my-bot">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">رفع ملف</label>
+              <div class="border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-blue-500/50 transition cursor-pointer" onclick="document.getElementById('pyFileInput').click()">
+                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-gray-400 text-sm">اضغط لرفع ملف <strong class="text-blue-400">.py</strong> أو <strong class="text-purple-400">.zip</strong></p>
+                <p class="text-gray-600 text-xs mt-1">الحد الأقصى: 5MB</p>
+              </div>
+              <input type="file" id="pyFileInput" accept=".py,.zip" class="hidden" onchange="handleFileSelect('py')">
+              <div id="pyFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
+            </div>
+            <div id="pyUploadError" class="text-red-400 text-sm hidden"></div>
+            <button onclick="createPythonUpload()" class="btn-python w-full py-3 rounded-xl text-white font-bold">رفع ونشر 🚀</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Create PHP Bot -->
+    <section id="section-create-php" class="hidden space-y-4">
+      <button onclick="showSection('bots')" class="text-gray-400 hover:text-white text-sm flex items-center gap-1">
+        <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        العودة
+      </button>
+      <h2 class="text-2xl font-bold text-white">بوت PHP جديد</h2>
+      <p class="text-gray-500 text-sm">ارفع سكربت PHP أو ملف مضغوط — بدون متطلبات، ارفع وشغل فوراً</p>
+
+      <!-- Code / Upload Tabs for PHP -->
+      <div class="flex gap-2 mb-2">
+        <button onclick="switchCreateMode('php', 'code')" id="phpModeCode" class="tab-active px-4 py-2 text-sm font-medium rounded-xl">كتابة كود</button>
+        <button onclick="switchCreateMode('php', 'upload')" id="phpModeUpload" class="px-4 py-2 text-sm font-medium text-gray-500 rounded-xl hover:bg-white/5">رفع ملف</button>
+      </div>
+
+      <div class="card p-6">
+        <!-- PHP: Write Code -->
+        <div id="phpCreateCode">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
+              <input type="text" id="phpName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none" placeholder="my-webhook">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">الكود</label>
+              <textarea id="phpCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-yellow-300 placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-y" placeholder="<?php&#10;echo 'مرحباً من Wolf Host!';&#10;$update = json_decode(file_get_contents('php://input'), true);&#10;// معالجة الطلب"></textarea>
+            </div>
+            <div id="phpCodeError" class="text-red-400 text-sm hidden"></div>
+            <button onclick="createPhpCode()" class="btn-php w-full py-3 rounded-xl text-white font-bold">انشر البوت 🚀</button>
+          </div>
+        </div>
+
+        <!-- PHP: Upload File -->
+        <div id="phpCreateUpload" class="hidden">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
+              <input type="text" id="phpUploadName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none" placeholder="my-bot">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">رفع ملف</label>
+              <div class="border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-purple-500/50 transition cursor-pointer" onclick="document.getElementById('phpFileInput').click()">
+                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-gray-400 text-sm">اضغط لرفع ملف <strong class="text-purple-400">.php</strong> أو <strong class="text-yellow-400">.zip</strong></p>
+                <p class="text-gray-600 text-xs mt-1">الحد الأقصى: 5MB</p>
+              </div>
+              <input type="file" id="phpFileInput" accept=".php,.zip" class="hidden" onchange="handleFileSelect('php')">
+              <div id="phpFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
+            </div>
+            <div id="phpUploadError" class="text-red-400 text-sm hidden"></div>
+            <button onclick="createPhpUpload()" class="btn-php w-full py-3 rounded-xl text-white font-bold">رفع ونشر 🚀</button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script>
     const API = window.location.origin;
-    const WS_BASE = API.replace(/^http/, 'ws');
     let token = localStorage.getItem('token');
     let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    let currentBotId = null;
-    let ws = null;
-    let resourceInterval = null;
-    let statusInterval = null;
+    let selectedFile = { py: null, php: null };
 
     if (!token) { window.location.href = '/login'; }
 
-    function getHeaders() {
-      return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-    }
-
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    function getHeaders() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }; }
+    function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; }
 
     function showSection(section) {
       document.querySelectorAll('[id^="section-"]').forEach(s => s.classList.add('hidden'));
+      document.querySelectorAll('[id^="nav"]').forEach(n => { n.classList.remove('bg-blue-600/20', 'text-blue-400'); n.classList.add('text-gray-400'); });
       document.getElementById(`section-${section}`).classList.remove('hidden');
+      const navMap = { bots: 'navBots', 'create-python': 'navPython', 'create-php': 'navPhp' };
+      if (navMap[section]) { const el = document.getElementById(navMap[section]); el.classList.add('bg-blue-600/20', 'text-blue-400'); el.classList.remove('text-gray-400'); }
       if (section === 'bots') loadBots();
     }
 
-    function switchDetailTab(tab) {
-      document.querySelectorAll('[id^="panel"]').forEach(p => p.classList.add('hidden'));
-      document.querySelectorAll('[id^="tab"]').forEach(t => { t.classList.remove('tab-active'); t.classList.add('text-gray-500'); });
-      document.getElementById(`panel${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.remove('hidden');
-      document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('tab-active');
-      document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.remove('text-gray-500');
+    function switchCreateMode(type, mode) {
+      ['code', 'upload'].forEach(m => {
+        document.getElementById(`${type}Mode${m.charAt(0).toUpperCase() + m.slice(1)}`).className = `px-4 py-2 text-sm font-medium rounded-xl ${m === mode ? 'tab-active' : 'text-gray-500 hover:bg-white/5'}`;
+        document.getElementById(`${type}Create${m.charAt(0).toUpperCase() + m.slice(1)}`).classList.toggle('hidden', m !== mode);
+      });
     }
 
-    function toggleMobileMenu() {
-      document.getElementById('mobileMenu').classList.toggle('hidden');
+    function handleFileSelect(type) {
+      const input = document.getElementById(`${type}FileInput`);
+      const file = input.files[0];
+      if (!file) return;
+      selectedFile[type] = file;
+      document.getElementById(`${type}FileName`).textContent = `✓ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      document.getElementById(`${type}FileName`).classList.remove('hidden');
+    }
+
+    async function createPythonCode() {
+      const name = document.getElementById('pyName').value.trim();
+      const code = document.getElementById('pyCode').value;
+      const reqs = document.getElementById('pyReqs').value;
+      const errEl = document.getElementById('pyCodeError');
+      errEl.classList.add('hidden');
+      if (!name) { errEl.textContent = 'أدخل اسم البوت'; errEl.classList.remove('hidden'); return; }
+      if (!code) { errEl.textContent = 'اكتب كود البوت'; errEl.classList.remove('hidden'); return; }
+      try {
+        const res = await fetch(`${API}/api/bots/code`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ name, bot_type: 'python', main_file: code, requirements: reqs }) });
+        if (res.ok) { document.getElementById('pyName').value = ''; document.getElementById('pyCode').value = ''; document.getElementById('pyReqs').value = ''; showSection('bots'); }
+        else { const d = await res.json(); errEl.textContent = d.detail || 'فشل'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
+    }
+
+    async function createPhpCode() {
+      const name = document.getElementById('phpName').value.trim();
+      const code = document.getElementById('phpCode').value;
+      const errEl = document.getElementById('phpCodeError');
+      errEl.classList.add('hidden');
+      if (!name) { errEl.textContent = 'أدخل اسم البوت'; errEl.classList.remove('hidden'); return; }
+      if (!code) { errEl.textContent = 'اكتب كود البوت'; errEl.classList.remove('hidden'); return; }
+      try {
+        const res = await fetch(`${API}/api/bots/code`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ name, bot_type: 'php', main_file: code, requirements: '' }) });
+        if (res.ok) { document.getElementById('phpName').value = ''; document.getElementById('phpCode').value = ''; showSection('bots'); }
+        else { const d = await res.json(); errEl.textContent = d.detail || 'فشل'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
+    }
+
+    async function createPythonUpload() {
+      const name = document.getElementById('pyUploadName').value.trim();
+      const file = selectedFile['py'];
+      const errEl = document.getElementById('pyUploadError');
+      errEl.classList.add('hidden');
+      if (!name) { errEl.textContent = 'أدخل اسم البوت'; errEl.classList.remove('hidden'); return; }
+      if (!file) { errEl.textContent = 'اختر ملف للرفع'; errEl.classList.remove('hidden'); return; }
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('bot_type', 'python');
+      formData.append('file', file);
+      try {
+        const res = await fetch(`${API}/api/bots/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+        if (res.ok) { document.getElementById('pyUploadName').value = ''; selectedFile['py'] = null; document.getElementById('pyFileName').classList.add('hidden'); showSection('bots'); }
+        else { const d = await res.json(); errEl.textContent = d.detail || 'فشل الرفع'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
+    }
+
+    async function createPhpUpload() {
+      const name = document.getElementById('phpUploadName').value.trim();
+      const file = selectedFile['php'];
+      const errEl = document.getElementById('phpUploadError');
+      errEl.classList.add('hidden');
+      if (!name) { errEl.textContent = 'أدخل اسم البوت'; errEl.classList.remove('hidden'); return; }
+      if (!file) { errEl.textContent = 'اختر ملف للرفع'; errEl.classList.remove('hidden'); return; }
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('bot_type', 'php');
+      formData.append('file', file);
+      try {
+        const res = await fetch(`${API}/api/bots/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+        if (res.ok) { document.getElementById('phpUploadName').value = ''; selectedFile['php'] = null; document.getElementById('phpFileName').classList.add('hidden'); showSection('bots'); }
+        else { const d = await res.json(); errEl.textContent = d.detail || 'فشل الرفع'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
     }
 
     async function loadBots() {
@@ -375,220 +318,36 @@
         const grid = document.getElementById('botsGrid');
         const noMsg = document.getElementById('noBotsMsg');
         grid.querySelectorAll('.bot-card').forEach(c => c.remove());
-
-        if (!bots.length) {
-          noMsg.classList.remove('hidden');
-          return;
-        }
+        if (!bots.length) { noMsg.classList.remove('hidden'); return; }
         noMsg.classList.add('hidden');
-
         bots.forEach(bot => {
-          const statusColors = { running: 'border-emerald-500/30 bg-emerald-500/5', stopped: 'border-gray-700/50 bg-gray-800/30', crashed: 'border-red-500/30 bg-red-500/5' };
-          const card = document.createElement('div');
-          card.className = `bot-card card p-5 cursor-pointer border ${statusColors[bot.status] || statusColors.stopped} slide-up`;
-          card.onclick = () => openBotDetail(bot.id);
-          card.innerHTML = `
+          const c = document.createElement('a');
+          c.href = `/bot/${bot.id}`;
+          const colors = { running: 'border-emerald-500/30 bg-emerald-500/5', stopped: 'border-gray-700/50 bg-gray-800/30', crashed: 'border-red-500/30 bg-red-500/5' };
+          c.className = `bot-card card p-5 block border ${colors[bot.status] || colors.stopped} slide-up`;
+          c.innerHTML = `
             <div class="flex items-start justify-between mb-3">
               <div class="w-10 h-10 rounded-xl ${bot.bot_type === 'python' ? 'bg-blue-500/10' : 'bg-purple-500/10'} flex items-center justify-center">
-                <svg class="w-5 h-5 ${bot.bot_type === 'python' ? 'text-blue-400' : 'text-purple-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${bot.bot_type === 'python' ? 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' : 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01'}"/>
-                </svg>
+                <span class="text-lg ${bot.bot_type === 'python' ? 'text-blue-400' : 'text-purple-400'} font-bold">${bot.bot_type === 'python' ? 'Py' : 'PHP'}</span>
               </div>
               <span class="status-dot ${bot.status}"></span>
             </div>
             <h3 class="font-bold text-white mb-1">${bot.name}</h3>
-            <p class="text-xs text-gray-500 mb-3">${bot.bot_type === 'python' ? 'بوت بايثون' : 'سكربت PHP'}</p>
-            <div class="flex items-center gap-2 text-xs">
-              <span class="${bot.status === 'running' ? 'text-emerald-400' : bot.status === 'crashed' ? 'text-red-400' : 'text-gray-500'}">
-                ${bot.status === 'running' ? 'يعمل' : bot.status === 'crashed' ? 'معطل' : 'متوقف'}
-              </span>
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="${bot.status === 'running' ? 'text-emerald-400' : bot.status === 'crashed' ? 'text-red-400' : 'text-gray-500'}">${bot.status === 'running' ? 'يعمل' : bot.status === 'crashed' ? 'معطل' : 'متوقف'}</span>
+              ${bot.webhook_active ? '<span class="text-blue-400">Webhook</span>' : ''}
               <span class="text-gray-600">·</span>
               <span class="text-gray-600">${new Date(bot.created_at).toLocaleDateString('ar-SA')}</span>
             </div>
           `;
-          grid.appendChild(card);
+          grid.appendChild(c);
         });
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    async function createBot() {
-      const name = document.getElementById('newBotName').value.trim();
-      const type = document.querySelector('input[name="botType"]:checked').value;
-      const code = document.getElementById('newBotCode').value;
-      const reqs = document.getElementById('newBotRequirements').value;
-      const errEl = document.getElementById('newBotError');
-      errEl.classList.add('hidden');
-
-      if (!name) { errEl.textContent = 'يرجى إدخال اسم البوت'; errEl.classList.remove('hidden'); return; }
-      if (!code) { errEl.textContent = 'يرجى كتابة كود البوت'; errEl.classList.remove('hidden'); return; }
-
-      try {
-        const res = await fetch(`${API}/api/bots/`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({ name, bot_type: type, main_file: code, requirements: reqs }),
-        });
-        if (res.ok) {
-          document.getElementById('newBotName').value = '';
-          document.getElementById('newBotCode').value = '';
-          document.getElementById('newBotRequirements').value = '';
-          showSection('bots');
-        } else {
-          const data = await res.json();
-          const msg = data.detail?.message || data.detail || 'فشل إنشاء البوت';
-          const violations = data.detail?.violations;
-          errEl.innerHTML = msg + (violations ? '<br><small class="text-red-400/70">' + violations.join('<br>') + '</small>' : '');
-          errEl.classList.remove('hidden');
-        }
-      } catch (e) {
-        errEl.textContent = 'خطأ في الاتصال بالخادم';
-        errEl.classList.remove('hidden');
-      }
-    }
-
-    async function openBotDetail(botId) {
-      currentBotId = botId;
-      if (resourceInterval) clearInterval(resourceInterval);
-      if (statusInterval) clearInterval(statusInterval);
-      if (ws) { ws.close(); ws = null; }
-
-      try {
-        const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
-        const bot = await res.json();
-        document.getElementById('detailName').textContent = bot.name;
-        document.getElementById('detailType').textContent = bot.bot_type === 'python' ? 'بوت بايثون' : 'سكربت PHP';
-        document.getElementById('detailCode').textContent = bot.main_file;
-        document.getElementById('editCode').value = bot.main_file || '';
-        document.getElementById('editRequirements').value = bot.requirements || '';
-
-        updateBotStatusUI(bot.status, bot.resource_usage);
-
-        statusInterval = setInterval(() => refreshBotStatus(botId), 3000);
-        resourceInterval = setInterval(() => refreshBotResources(botId), 5000);
-
-        connectLogs(botId);
-
-        switchDetailTab('logs');
-        showSection('detail');
       } catch (e) { console.error(e); }
-    }
-
-    async function refreshBotStatus(botId) {
-      try {
-        const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
-        const bot = await res.json();
-        updateBotStatusUI(bot.status, bot.resource_usage);
-      } catch (e) {}
-    }
-
-    async function refreshBotResources(botId) {
-      try {
-        const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
-        const bot = await res.json();
-        const usage = bot.resource_usage || {};
-        document.getElementById('detailCpu').textContent = (usage.cpu || 0) + '%';
-        document.getElementById('detailRam').textContent = (usage.memory_mb || 0) + ' MB';
-      } catch (e) {}
-    }
-
-    function updateBotStatusUI(status, usage) {
-      const dot = document.getElementById('detailStatusDot');
-      const statusText = document.getElementById('detailStatus');
-      const statusBig = document.getElementById('detailStatusText');
-      dot.className = 'status-dot ' + status;
-      const labels = { running: 'يعمل', stopped: 'متوقف', crashed: 'معطل' };
-      statusText.textContent = labels[status] || status;
-      statusBig.textContent = labels[status] || status;
-      if (usage) {
-        document.getElementById('detailCpu').textContent = (usage.cpu || 0) + '%';
-        document.getElementById('detailRam').textContent = (usage.memory_mb || 0) + ' MB';
-      }
-    }
-
-    async function controlBot(action) {
-      if (!currentBotId) return;
-      try {
-        await fetch(`${API}/api/bots/${currentBotId}/${action}`, { method: 'POST', headers: getHeaders() });
-        setTimeout(() => refreshBotStatus(currentBotId), 500);
-        if (action === 'start') {
-          setTimeout(() => connectLogs(currentBotId), 300);
-        }
-      } catch (e) { console.error(e); }
-    }
-
-    async function deleteCurrentBot() {
-      if (!currentBotId || !confirm('هل أنت متأكد من حذف هذا البوت؟')) return;
-      try {
-        await fetch(`${API}/api/bots/${currentBotId}`, { method: 'DELETE', headers: getHeaders() });
-        if (ws) ws.close();
-        currentBotId = null;
-        showSection('bots');
-      } catch (e) { console.error(e); }
-    }
-
-    async function saveCode() {
-      if (!currentBotId) return;
-      const code = document.getElementById('editCode').value;
-      const reqs = document.getElementById('editRequirements').value;
-      const errEl = document.getElementById('editError');
-      errEl.classList.add('hidden');
-      try {
-        const res = await fetch(`${API}/api/bots/${currentBotId}/code`, {
-          method: 'PUT',
-          headers: getHeaders(),
-          body: JSON.stringify({ main_file: code, requirements: reqs }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          errEl.innerHTML = data.detail?.message || 'فشل حفظ التعديلات';
-          errEl.classList.remove('hidden');
-        }
-      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
-    }
-
-    function connectLogs(botId) {
-      if (ws) { ws.close(); ws = null; }
-      document.getElementById('logConsole').innerHTML = '<span class="text-gray-600">// جاري الاتصال بخادم السجلات...</span>';
-      document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> متصل...';
-
-      ws = new WebSocket(`${WS_BASE}/api/logs/ws/${botId}?token=${token}`);
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'log') {
-            const console = document.getElementById('logConsole');
-            console.innerHTML += msg.data.replace(/\n/g, '<br>');
-            console.scrollTop = console.scrollHeight;
-          } else if (msg.type === 'status') {
-            if (msg.data === 'stopped') {
-              document.getElementById('logConsole').innerHTML += '\n<span class="text-red-400">// البوت متوقف</span>\n';
-            }
-          }
-        } catch (e) {}
-      };
-
-      ws.onopen = () => {
-        document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-slow"></span> مباشر';
-      };
-
-      ws.onclose = () => {
-        document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-gray-500"></span> غير متصل';
-      };
-
-      ws.onerror = () => {
-        document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> خطأ';
-      };
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      if (currentUser.username) {
-        document.getElementById('usernameDisplay').textContent = currentUser.username;
-      }
+      if (currentUser.username) document.getElementById('usernameDisplay').textContent = currentUser.username;
       showSection('bots');
-      document.getElementById('menuToggle').addEventListener('click', toggleMobileMenu);
     });
   </script>
 </body>

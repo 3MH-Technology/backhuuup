@@ -5,6 +5,7 @@ import re
 import resource
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import psutil
@@ -14,6 +15,9 @@ from config import settings
 logger = logging.getLogger("wolfhost.container")
 
 BOTS_DIR = Path("/app/data/bots")
+ALLOWED_EXTENSIONS = {".py", ".php", ".txt"}
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024
+MAX_ZIP_SIZE = 10 * 1024 * 1024
 
 
 class ContainerManager:
@@ -23,10 +27,6 @@ class ContainerManager:
     @staticmethod
     def _allocate_port() -> int:
         return next(ContainerManager._port_allocator)
-
-    @staticmethod
-    def _release_port(port: int):
-        pass
 
     @staticmethod
     def get_bot_port(container_id: str) -> int | None:
@@ -45,6 +45,41 @@ class ContainerManager:
         return d
 
     @staticmethod
+    def _sanitize_path(path: str) -> bool:
+        if ".." in path or path.startswith("/"):
+            return False
+        return True
+
+    @staticmethod
+    def _is_safe_filename(name: str) -> bool:
+        ext = Path(name).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS and ext != ".zip":
+            return False
+        if not ContainerManager._sanitize_path(name):
+            return False
+        return True
+
+    @staticmethod
+    def _extract_zip(zip_path: Path, extract_dir: Path) -> list[str]:
+        extracted = []
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for info in zf.infolist():
+                if info.is_dir():
+                    continue
+                fname = info.filename
+                if not ContainerManager._is_safe_filename(fname):
+                    logger.warning(f"Skipping unsafe file in zip: {fname}")
+                    continue
+                if info.file_size > MAX_UPLOAD_SIZE:
+                    logger.warning(f"Skipping oversized file in zip: {fname} ({info.file_size} bytes)")
+                    continue
+                dest = extract_dir / fname
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                zf.extract(info, extract_dir)
+                extracted.append(fname)
+        return extracted
+
+    @staticmethod
     def _write_main_file(work_dir: Path, bot_type: str, content: str):
         filename = "bot.py" if bot_type == "python" else "index.php"
         (work_dir / filename).write_text(content, encoding="utf-8")
@@ -56,13 +91,15 @@ class ContainerManager:
 
     @classmethod
     async def start_bot(cls, bot_id: int, user_id: int, slug: str,
-                        bot_type: str, main_file_content: str,
-                        requirements: str = "") -> dict:
+                        bot_type: str, main_file_content: str = "",
+                        requirements: str = "", is_upload: bool = False) -> dict:
         name = cls.container_name(user_id, slug)
         work_dir = cls._work_dir(user_id, bot_id)
 
-        cls._write_main_file(work_dir, bot_type, main_file_content)
-        cls._write_requirements(work_dir, requirements)
+        if not is_upload:
+            cls._write_main_file(work_dir, bot_type, main_file_content)
+            if bot_type == "python":
+                cls._write_requirements(work_dir, requirements)
 
         log_file = work_dir / "bot.log"
         log_fh = open(log_file, "w", encoding="utf-8")
@@ -70,20 +107,29 @@ class ContainerManager:
         port = cls._allocate_port()
 
         if bot_type == "python":
-            if requirements.strip():
+            req_file = work_dir / "requirements.txt"
+            if req_file.exists() and req_file.stat().st_size > 0:
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(
                     None,
                     lambda: subprocess.run(
                         [sys.executable, "-m", "pip", "install", "-q",
-                         "-r", str(work_dir / "requirements.txt")],
+                         "-r", str(req_file)],
                         cwd=str(work_dir),
                         capture_output=True, timeout=120,
                     ),
                 )
-            cmd = [sys.executable, "-u", str(work_dir / "bot.py")]
+            entry = work_dir / "bot.py"
+            if not entry.exists():
+                py_files = list(work_dir.glob("*.py"))
+                entry = py_files[0] if py_files else entry
+            cmd = [sys.executable, "-u", str(entry)]
         else:
-            cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(work_dir / "index.php")]
+            entry = work_dir / "index.php"
+            if not entry.exists():
+                php_files = list(work_dir.glob("*.php"))
+                entry = php_files[0] if php_files else entry
+            cmd = ["php", "-S", f"0.0.0.0:{port}", "-t", str(work_dir), str(entry)]
 
         env = {
             **os.environ,

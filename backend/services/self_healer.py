@@ -70,6 +70,7 @@ class SelfHealer:
                         bot_type=bot.bot_type,
                         main_file_content=bot.main_file or "",
                         requirements=bot.requirements or "",
+                        is_upload=bot.is_upload or False,
                     )
                     if outcome["status"] == "success":
                         bot.container_id = outcome["container_id"]
@@ -105,6 +106,7 @@ class SelfHealer:
                     bot_type=bot.bot_type,
                     main_file_content=bot.main_file or "",
                     requirements=bot.requirements or "",
+                    is_upload=bot.is_upload or False,
                 )
                 if outcome["status"] == "success":
                     bot.container_id = outcome["container_id"]
