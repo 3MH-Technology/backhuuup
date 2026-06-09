@@ -8,7 +8,7 @@
   <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <script>
-(function(){function _p(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)});var _d=new Date();debugger;var _t=new Date()-_d;if(_t>100){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0f1e;color:#ef4444;font-family:sans-serif;font-size:24px;font-weight:bold;text-align:center;padding:20px">🚫 أدوات المطور غير مسموح بها</div>'}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_p)}else{_p()}})();
+(function(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)})})();
 </script>
   <style>
     * { font-family: 'Tajawal', system-ui, sans-serif; }
@@ -143,12 +143,12 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">رفع ملف</label>
-              <div class="border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-blue-500/50 transition cursor-pointer" onclick="document.getElementById('pyFileInput').click()">
+              <div class="relative border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-blue-500/50 transition cursor-pointer">
                 <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                 <p class="text-gray-400 text-sm">اضغط لرفع ملف <strong class="text-blue-400">.py</strong> أو <strong class="text-purple-400">.zip</strong></p>
                 <p class="text-gray-600 text-xs mt-1">الحد الأقصى: 5MB</p>
+                <input type="file" id="pyFileInput" accept=".py,.zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect('py')">
               </div>
-              <input type="file" id="pyFileInput" accept=".py,.zip" class="hidden" onchange="handleFileSelect('py')">
               <div id="pyFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
             </div>
             <div id="pyUploadError" class="text-red-400 text-sm hidden"></div>
@@ -199,12 +199,12 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">رفع ملف</label>
-              <div class="border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-purple-500/50 transition cursor-pointer" onclick="document.getElementById('phpFileInput').click()">
+              <div class="relative border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-purple-500/50 transition cursor-pointer">
                 <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                 <p class="text-gray-400 text-sm">اضغط لرفع ملف <strong class="text-purple-400">.php</strong> أو <strong class="text-yellow-400">.zip</strong></p>
                 <p class="text-gray-600 text-xs mt-1">الحد الأقصى: 5MB</p>
+                <input type="file" id="phpFileInput" accept=".php,.zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect('php')">
               </div>
-              <input type="file" id="phpFileInput" accept=".php,.zip" class="hidden" onchange="handleFileSelect('php')">
               <div id="phpFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
             </div>
             <div id="phpUploadError" class="text-red-400 text-sm hidden"></div>
