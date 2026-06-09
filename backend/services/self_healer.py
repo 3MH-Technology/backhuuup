@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
@@ -46,6 +47,21 @@ class SelfHealer:
     @classmethod
     async def _heal_once(cls):
         async with async_session() as session:
+            now = datetime.now(timezone.utc)
+
+            expired = await session.execute(
+                select(Bot).where(Bot.expires_at.isnot(None), Bot.expires_at < now)
+            )
+            for bot in expired.scalars().all():
+                if bot.status == "running":
+                    logger.info(f"Bot {bot.id} ({bot.slug}) expired — stopping")
+                    await ContainerManager.stop_bot(bot.container_id)
+                    bot.status = "stopped"
+                    bot.container_id = None
+                elif bot.status != "stopped":
+                    bot.status = "stopped"
+            await session.commit()
+
             result = await session.execute(
                 select(Bot).where(Bot.status == "running").with_for_update(skip_locked=True)
             )

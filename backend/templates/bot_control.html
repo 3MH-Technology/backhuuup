@@ -53,6 +53,7 @@
         <button id="btnStart" onclick="controlBot('start')" class="btn-success px-4 py-2 rounded-xl text-white text-sm font-medium">تشغيل</button>
         <button id="btnStop" onclick="controlBot('stop')" class="btn-danger px-4 py-2 rounded-xl text-white text-sm font-medium">إيقاف</button>
         <button id="btnRestart" onclick="controlBot('restart')" class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition">إعادة تشغيل</button>
+        <button id="btnRenew" onclick="showRenewCaptcha()" class="px-4 py-2 rounded-xl bg-gradient-to-l from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-sm font-bold transition hidden">تجديد</button>
       </div>
     </div>
 
@@ -142,6 +143,8 @@
             <div><span class="text-gray-500">النوع:</span> <span id="infoType" class="text-gray-300"></span></div>
             <div><span class="text-gray-500">Container ID:</span> <span id="infoContainer" class="text-gray-300 font-mono"></span></div>
             <div><span class="text-gray-500">تاريخ الإنشاء:</span> <span id="infoCreated" class="text-gray-300"></span></div>
+            <div><span class="text-gray-500">الصلاحية:</span> <span id="infoExpiry" class="text-gray-300"></span></div>
+            <div><span class="text-gray-500">الحالة:</span> <span id="infoExpired" class="text-gray-300"></span></div>
           </div>
         </div>
         <div class="card p-5">
@@ -154,6 +157,19 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Captcha Modal -->
+  <div id="captchaModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden" onclick="if(event.target===this)closeCaptcha()">
+    <div class="bg-gray-900 border border-gray-700/50 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-white mb-2 text-center">🤖 تجديد البوت</h3>
+      <p class="text-gray-400 text-sm text-center mb-4">حل الكابتشا لتجديد البوت لمدة 4 أيام</p>
+      <div id="captchaQuestion" class="text-center text-2xl font-bold text-blue-400 mb-4 bg-gray-800/50 rounded-xl py-4"></div>
+      <input type="number" id="captchaAnswer" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white text-center text-lg focus:border-blue-500 focus:outline-none mb-3" placeholder="أدخل الإجابة" onkeydown="if(event.key==='Enter')submitCaptcha()">
+      <div id="captchaError" class="text-red-400 text-sm text-center hidden mb-3"></div>
+      <button onclick="submitCaptcha()" class="w-full py-3 bg-gradient-to-l from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl transition">تأكيد التجديد</button>
+      <button onclick="closeCaptcha()" class="w-full py-2 text-gray-500 hover:text-gray-300 text-sm mt-2 transition">إلغاء</button>
     </div>
   </div>
 
@@ -195,6 +211,14 @@
         document.getElementById('infoContainer').textContent = bot.container_id || '—';
         document.getElementById('infoCreated').textContent = bot.created_at ? new Date(bot.created_at).toLocaleDateString('ar-SA') : '—';
         document.getElementById('restartsDisplay').textContent = bot.restart_count || 0;
+
+        const expiresDate = bot.expires_at ? new Date(bot.expires_at) : null;
+        const expired = bot.expired;
+        const daysLeft = expiresDate ? Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24)) : 4;
+        document.getElementById('infoExpiry').textContent = expiresDate ? expiresDate.toLocaleDateString('ar-SA') : '—';
+        document.getElementById('infoExpired').textContent = expired ? '⚠️ منتهي — جدد الاشتراك' : '✅ ساري — ' + daysLeft + ' أيام متبقية';
+        document.getElementById('infoExpired').className = expired ? 'text-red-400' : 'text-emerald-400';
+        document.getElementById('btnRenew').classList.toggle('hidden', !expired);
 
         if (bot.bot_type === 'php') {
           document.getElementById('reqSection').classList.add('hidden');
@@ -343,6 +367,39 @@
       ws.onopen = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> مباشر'; };
       ws.onclose = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-gray-500"></span> غير متصل'; };
       ws.onerror = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> خطأ'; };
+    }
+
+    let currentCaptchaId = null;
+
+    async function showRenewCaptcha() {
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}/captcha`, { headers: getHeaders() });
+        const data = await res.json();
+        currentCaptchaId = data.captcha_id;
+        document.getElementById('captchaQuestion').textContent = data.question;
+        document.getElementById('captchaError').classList.add('hidden');
+        document.getElementById('captchaAnswer').value = '';
+        document.getElementById('captchaModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('captchaAnswer').focus(), 100);
+      } catch (e) { alert('خطأ في تحميل الكابتشا'); }
+    }
+
+    function closeCaptcha() { document.getElementById('captchaModal').classList.add('hidden'); currentCaptchaId = null; }
+
+    async function submitCaptcha() {
+      const answer = document.getElementById('captchaAnswer').value.trim();
+      const errEl = document.getElementById('captchaError');
+      errEl.classList.add('hidden');
+      if (!answer) { errEl.textContent = 'أدخل الإجابة'; errEl.classList.remove('hidden'); return; }
+      try {
+        const res = await fetch(`${API}/api/bots/${botId}/renew`, {
+          method: 'POST', headers: getHeaders(),
+          body: JSON.stringify({ captcha_id: currentCaptchaId, answer }),
+        });
+        const data = await res.json();
+        if (res.ok) { closeCaptcha(); loadBot(); }
+        else { errEl.textContent = data.detail || 'فشل التجديد'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
     }
 
     document.addEventListener('DOMContentLoaded', loadBot);

@@ -2,6 +2,7 @@ import re
 import shutil
 import unicodedata
 import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
@@ -16,11 +17,14 @@ from models.user import User
 from services.auth_service import AuthService
 from services.container_manager import ContainerManager, BOTS_DIR
 from services.limiter import limiter
+from services.captcha import CaptchaService
 
 router = APIRouter(prefix="/api/bots", tags=["Bot Management"])
 
 ALLOWED_UPLOAD_EXTS = {".py", ".php", ".zip"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
+
+BOT_LIFETIME_DAYS = 4
 
 
 class CreateBotCode(BaseModel):
@@ -33,6 +37,11 @@ class CreateBotCode(BaseModel):
 class UpdateCodeRequest(BaseModel):
     main_file: str
     requirements: str = ""
+
+
+class RenewRequest(BaseModel):
+    captcha_id: str
+    answer: str
 
 
 def _slugify(name: str) -> str:
@@ -78,6 +87,35 @@ def _sanitize_zip(zip_path: Path) -> list[str]:
     return extracted
 
 
+def _is_expired(bot: Bot) -> bool:
+    if bot.expires_at is None:
+        return False
+    return datetime.now(timezone.utc) > bot.expires_at
+
+
+def _bot_to_dict(bot: Bot) -> dict:
+    usage = ContainerManager.get_resource_usage(bot.container_id) if bot.container_id else {"cpu": 0, "memory_mb": 0}
+    return {
+        "id": bot.id,
+        "name": bot.name,
+        "slug": bot.slug,
+        "bot_type": bot.bot_type,
+        "status": ContainerManager.get_status(bot.container_id) if bot.container_id else bot.status,
+        "container_id": bot.container_id,
+        "main_file": bot.main_file,
+        "requirements": bot.requirements,
+        "is_upload": bot.is_upload or False,
+        "upload_path": bot.upload_path,
+        "webhook_url": bot.webhook_url or f"https://{settings.domain}/api/webhook/",
+        "webhook_active": bot.webhook_active or False,
+        "restart_count": bot.restart_count,
+        "created_at": bot.created_at.isoformat() if bot.created_at else None,
+        "expires_at": bot.expires_at.isoformat() if bot.expires_at else None,
+        "expired": _is_expired(bot),
+        "resource_usage": usage,
+    }
+
+
 @router.get("/")
 async def list_bots(
     user: User = Depends(AuthService.get_current_user),
@@ -97,6 +135,8 @@ async def list_bots(
             "is_upload": b.is_upload or False,
             "webhook_active": b.webhook_active or False,
             "created_at": b.created_at.isoformat() if b.created_at else None,
+            "expires_at": b.expires_at.isoformat() if b.expires_at else None,
+            "expired": _is_expired(b),
         }
         for b in bots
     ]
@@ -130,6 +170,7 @@ async def create_bot_code(
         main_file=req.main_file,
         requirements=req.requirements if req.bot_type == "python" else "",
         is_upload=False,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS),
     )
     session.add(bot)
     await session.commit()
@@ -140,6 +181,7 @@ async def create_bot_code(
         "slug": bot.slug,
         "bot_type": bot.bot_type,
         "status": "created",
+        "expires_at": bot.expires_at.isoformat() if bot.expires_at else None,
         "webhook_url": f"https://{settings.domain}/api/webhook/",
     }
 
@@ -197,6 +239,7 @@ async def create_bot_upload(
             bot_type=bot_type,
             is_upload=True,
             upload_path=str(extract_dir),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS),
         )
     else:
         bot_file_path = work_dir / slug / file.filename
@@ -209,6 +252,7 @@ async def create_bot_upload(
             bot_type=bot_type,
             is_upload=True,
             upload_path=str(bot_file_path),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS),
         )
 
     session.add(bot)
@@ -221,6 +265,7 @@ async def create_bot_upload(
         "bot_type": bot.bot_type,
         "status": "created",
         "is_upload": True,
+        "expires_at": bot.expires_at.isoformat() if bot.expires_at else None,
         "webhook_url": f"https://{settings.domain}/api/webhook/",
     }
 
@@ -237,24 +282,7 @@ async def get_bot(
     bot = result.scalar_one_or_none()
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
-    usage = ContainerManager.get_resource_usage(bot.container_id) if bot.container_id else {"cpu": 0, "memory_mb": 0}
-    return {
-        "id": bot.id,
-        "name": bot.name,
-        "slug": bot.slug,
-        "bot_type": bot.bot_type,
-        "status": ContainerManager.get_status(bot.container_id) if bot.container_id else bot.status,
-        "container_id": bot.container_id,
-        "main_file": bot.main_file,
-        "requirements": bot.requirements,
-        "is_upload": bot.is_upload or False,
-        "upload_path": bot.upload_path,
-        "webhook_url": bot.webhook_url or f"https://{settings.domain}/api/webhook/",
-        "webhook_active": bot.webhook_active or False,
-        "restart_count": bot.restart_count,
-        "created_at": bot.created_at.isoformat() if bot.created_at else None,
-        "resource_usage": usage,
-    }
+    return _bot_to_dict(bot)
 
 
 @router.post("/{bot_id}/start")
@@ -269,6 +297,9 @@ async def start_bot(
     bot = result.scalar_one_or_none()
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
+
+    if _is_expired(bot):
+        raise HTTPException(status_code=403, detail="انتهت صلاحية البوت. جدد الاشتراك أولاً.")
 
     outcome = await ContainerManager.start_bot(
         bot_id=bot.id,
@@ -323,6 +354,9 @@ async def restart_bot(
     bot = result.scalar_one_or_none()
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
+
+    if _is_expired(bot):
+        raise HTTPException(status_code=403, detail="انتهت صلاحية البوت. جدد الاشتراك أولاً.")
 
     if bot.container_id:
         await ContainerManager.stop_bot(bot.container_id)
@@ -379,6 +413,9 @@ async def update_webhook(
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
 
+    if _is_expired(bot):
+        raise HTTPException(status_code=403, detail="انتهت صلاحية البوت. جدد الاشتراك أولاً.")
+
     bot.webhook_active = not bot.webhook_active
     bot.webhook_url = f"/api/webhook/" if bot.webhook_active else None
     await session.commit()
@@ -403,3 +440,33 @@ async def delete_bot(
     await session.delete(bot)
     await session.commit()
     return {"status": "success", "message": "تم حذف البوت"}
+
+
+@router.get("/{bot_id}/captcha")
+async def get_captcha(bot_id: int, user: User = Depends(AuthService.get_current_user)):
+    return CaptchaService.generate()
+
+
+@router.post("/{bot_id}/renew")
+@limiter.limit("2/hour")
+async def renew_bot(
+    request: Request,
+    bot_id: int,
+    req: RenewRequest,
+    user: User = Depends(AuthService.get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    if not CaptchaService.verify(req.captcha_id, req.answer):
+        raise HTTPException(status_code=400, detail="إجابة الكابتشا خاطئة")
+
+    result = await session.execute(
+        select(Bot).where(Bot.id == bot_id, Bot.user_id == user.id)
+    )
+    bot = result.scalar_one_or_none()
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+
+    bot.expires_at = datetime.now(timezone.utc) + timedelta(days=BOT_LIFETIME_DAYS)
+    await session.commit()
+
+    return {"status": "success", "expires_at": bot.expires_at.isoformat(), "message": "تم تجديد البوت لمدة 4 أيام"}

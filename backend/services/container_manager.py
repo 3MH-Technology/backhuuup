@@ -2,11 +2,17 @@ import asyncio
 import logging
 import os
 import re
-import resource
 import subprocess
 import sys
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import resource
+    HAS_RESOURCE = True
+except ImportError:
+    HAS_RESOURCE = False
 
 import psutil
 
@@ -260,6 +266,8 @@ class ContainerManager:
 
 
 def _set_limits():
+    if not HAS_RESOURCE:
+        return
     try:
         mem_bytes = settings.container_mem_limit_mb * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
