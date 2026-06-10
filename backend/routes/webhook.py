@@ -10,6 +10,7 @@ from models.database import async_session
 from models.bot import Bot
 from services.container_manager import ContainerManager
 from services.limiter import limiter
+from services.webhook_crypto import hash_token
 
 logger = logging.getLogger("wolfhost.webhook")
 
@@ -30,8 +31,9 @@ def extract_slug(request: Request, x_bot_slug: str) -> str:
 @router.api_route("/{token}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 @limiter.limit("120/minute")
 async def proxy_webhook_token(request: Request, token: str):
+    token_h = hash_token(token)
     async with async_session() as session:
-        result = await session.execute(select(Bot).where(Bot.webhook_token == token))
+        result = await session.execute(select(Bot).where(Bot.webhook_token_hash == token_h))
         bot = result.scalar_one_or_none()
     if not bot or not bot.webhook_active:
         raise HTTPException(status_code=404, detail="Invalid webhook token")
@@ -44,8 +46,9 @@ async def proxy_webhook_root(request: Request, x_bot_slug: str = Header(default=
     token = x_webhook_token.strip() or x_bot_slug.strip()
     if not token:
         raise HTTPException(status_code=400, detail="Missing webhook token")
+    token_h = hash_token(token)
     async with async_session() as session:
-        result = await session.execute(select(Bot).where(Bot.webhook_token == token))
+        result = await session.execute(select(Bot).where(Bot.webhook_token_hash == token_h))
         bot = result.scalar_one_or_none()
     if not bot or not bot.webhook_active:
         raise HTTPException(status_code=404, detail="Invalid webhook token")

@@ -348,6 +348,16 @@
       return d.innerHTML;
     }
 
+    function appendLog(el, text) {
+      // Safely append log text without innerHTML (prevents XSS from untrusted log output)
+      const lines = text.split('\n');
+      lines.forEach((line, i) => {
+        el.appendChild(document.createTextNode(line));
+        if (i < lines.length - 1) el.appendChild(document.createElement('br'));
+      });
+      el.scrollTop = el.scrollHeight;
+    }
+
     function connectLogs() {
       if (ws) { ws.close(); ws = null; }
       const console = document.getElementById('logConsole');
@@ -361,10 +371,12 @@
           const msg = JSON.parse(event.data);
           if (msg.type === 'log') {
             if (console.innerHTML === '<span class="text-gray-600">// جاري الاتصال...</span>') console.innerHTML = '';
-            console.innerHTML += msg.data.replace(/\n/g, '<br>');
-            console.scrollTop = console.scrollHeight;
+            appendLog(console, msg.data);
           } else if (msg.type === 'status' && msg.data === 'stopped') {
-            console.innerHTML += '\n<span class="text-red-400">// البوت متوقف</span>\n';
+            const stoppedSpan = document.createElement('span');
+            stoppedSpan.className = 'text-red-400';
+            stoppedSpan.textContent = '\n// البوت متوقف\n';
+            console.appendChild(stoppedSpan);
           }
         } catch (e) {}
       };

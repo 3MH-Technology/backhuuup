@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Set, Dict
 
 from fastapi import WebSocket
@@ -58,17 +59,26 @@ class LogStreamer:
     @classmethod
     async def _stream_logs(cls, bot_id: int, websocket: WebSocket, container_id: str | None):
         last_content = ""
+        cached_cid = container_id
+        cid_fetched_at = 0.0
+        CID_TTL = 30.0  # seconds
+
         while True:
             try:
-                cid = container_id
-                from models.database import async_session
-                from models.bot import Bot
-                from sqlalchemy import select
-                async with async_session() as session:
-                    result = await session.execute(select(Bot.container_id).where(Bot.id == bot_id))
-                    row = result.one_or_none()
-                    if row:
-                        cid = row[0] or cid
+                now = time.monotonic()
+                # Only query DB if cache is stale or we have no container_id
+                if not cached_cid or (now - cid_fetched_at) > CID_TTL:
+                    from models.database import async_session
+                    from models.bot import Bot
+                    from sqlalchemy import select
+                    async with async_session() as session:
+                        result = await session.execute(select(Bot.container_id).where(Bot.id == bot_id))
+                        row = result.one_or_none()
+                        if row:
+                            cached_cid = row[0] or cached_cid
+                    cid_fetched_at = now
+
+                cid = cached_cid or container_id
 
                 raw = await ContainerManager.get_logs(cid, tail=200) if cid else ""
                 if raw and raw != last_content:

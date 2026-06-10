@@ -62,12 +62,6 @@ async def forgot_password(request: Request, req: ForgotPasswordRequest, session:
     return await AuthService.forgot_password(req.username, request, session)
 
 
-@router.get("/reset-code/{username}")
-@limiter.limit("10/minute")
-async def get_reset_code(request: Request, username: str, session: AsyncSession = Depends(get_session)):
-    return await AuthService.get_reset_code(username, request, session)
-
-
 @router.post("/reset-password")
 @limiter.limit("5/minute")
 async def reset_password(request: Request, req: ResetPasswordRequest, session: AsyncSession = Depends(get_session)):

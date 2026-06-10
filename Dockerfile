@@ -23,6 +23,6 @@ RUN mkdir -p /app/logs /app/data
 EXPOSE 7860
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -fs http://127.0.0.1:7860/ || exit 1
+    CMD curl -fs http://127.0.0.1:7860/api/health || exit 1
 
 ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]

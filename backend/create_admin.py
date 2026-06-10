@@ -21,11 +21,14 @@ async def create_admin(username: str, password: str):
         session.add(user)
         await session.commit()
         print(f"✅ Admin account created: {username}")
-        print(f"   Password: {password}")
         print(f"   No limits: device check ⛔, max bots ⛔, access all bots ✅")
 
 
 if __name__ == "__main__":
-    username = sys.argv[1] if len(sys.argv) > 1 else "admin"
-    password = sys.argv[2] if len(sys.argv) > 2 else "Admin123!"
+    if len(sys.argv) < 3:
+        print("Usage: python create_admin.py <username> <password>")
+        print("  Password must be provided as the second argument.")
+        sys.exit(1)
+    username = sys.argv[1]
+    password = sys.argv[2]
     asyncio.run(create_admin(username, password))

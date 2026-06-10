@@ -52,7 +52,7 @@ services:
         condition: service_healthy
     # No ports exposed to host — all traffic via nginx on bot net
     expose:
-      - "8000"
+      - "7860"
     environment:
       DATABASE_URL:            postgresql+asyncpg://${POSTGRES_USER:-wolfhost}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wolfhost}
       SECRET_KEY:              ${SECRET_KEY:?Set SECRET_KEY in .env}
@@ -65,8 +65,6 @@ services:
       PHP_IMAGE:               ${PHP_IMAGE:-php:8.2-alpine}
       DOCKER_NETWORK:          estidafa_bot_net
     volumes:
-      # Docker socket → backend creates/manages user bot containers
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       # Shared tmp for bot code artifacts
       - bot_code:/tmp
     networks:
@@ -76,8 +74,6 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    cap_add:
-      - NET_BIND_SERVICE    # minimal capability to bind port 8000
 
   # ── Nginx Reverse Proxy ────────────────────────────────────────────
   nginx:

@@ -9,6 +9,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     hashed_password = Column(String(255), nullable=False)
     username = Column(String(100), unique=True, index=True, nullable=False)
+    email = Column(String(255), nullable=True, unique=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_active = Column(Integer, default=1)
     is_admin = Column(Boolean, default=False)

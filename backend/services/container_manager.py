@@ -165,71 +165,74 @@ with open(_user, "rb") as _f:
                 cls._write_requirements(work_dir, requirements)
 
         log_file = work_dir / "bot.log"
-        log_fh = open(log_file, "w", encoding="utf-8")
+        log_fh = None
 
         port = await cls._allocate_port()
 
-        if bot_type == "python":
-            # ── isolated venv per bot ──
-            venv_path = work_dir / "venv"
-            python_exe = str(venv_path / "bin" / "python")
-            loop = asyncio.get_event_loop()
-            if not (venv_path / "pyvenv.cfg").exists():
-                logger.info(f"Creating venv for {name} at {venv_path}")
-                await loop.run_in_executor(
-                    None,
-                    lambda: subprocess.run(
-                        [sys.executable, "-m", "venv", str(venv_path)],
-                        capture_output=True, timeout=60,
-                    ),
-                )
-            # ── auto-install requirements in isolated venv ──
-            req_file = work_dir / "requirements.txt"
-            if req_file.exists() and req_file.stat().st_size > 0:
-                await loop.run_in_executor(
-                    None,
-                    lambda: subprocess.run(
-                        [python_exe, "-m", "pip", "install", "-q",
-                         "-r", str(req_file)],
-                        cwd=str(work_dir),
-                        capture_output=True, timeout=120,
-                    ),
-                )
-            cls._write_boot_loader(work_dir)
-            entry = work_dir / "bot.py"
-            if not entry.exists():
-                py_files = [f for f in work_dir.glob("*.py") if f.name != "_wolf_boot.py"]
-                if not py_files:
-                    slug_dir = work_dir / slug
-                    if slug_dir.exists():
-                        py_files = [f for f in slug_dir.glob("*.py") if f.name != "_wolf_boot.py"]
-                entry = py_files[0] if py_files else entry
-            cmd = [python_exe, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
-        else:
-            entry = work_dir / "index.php"
-            if not entry.exists():
-                php_files = list(work_dir.glob("*.php"))
-                if not php_files:
-                    slug_dir = work_dir / slug
-                    if slug_dir.exists():
-                        php_files = list(slug_dir.glob("*.php"))
-                entry = php_files[0] if php_files else entry
-            cmd = ["php", "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
-
-        cf_proxy = os.environ.get("CF_PROXY", "")
-        env = {
-            "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-            "LANG": os.environ.get("LANG", "en_US.UTF-8"),
-            "LC_ALL": os.environ.get("LC_ALL", "en_US.UTF-8"),
-            "HOME": str(work_dir),
-            "TMPDIR": str(work_dir),
-            "PYTHONUNBUFFERED": "1",
-            "PYTHONNOUSERSITE": "1",
-            "PORT": str(port),
-            "CF_PROXY": cf_proxy,
-        }
-
         try:
+            if bot_type == "python":
+                # ── isolated venv per bot ──
+                venv_path = work_dir / "venv"
+                python_exe = str(venv_path / "bin" / "python")
+                loop = asyncio.get_event_loop()
+                if not (venv_path / "pyvenv.cfg").exists():
+                    logger.info(f"Creating venv for {name} at {venv_path}")
+                    await loop.run_in_executor(
+                        None,
+                        lambda: subprocess.run(
+                            [sys.executable, "-m", "venv", str(venv_path)],
+                            capture_output=True, timeout=60,
+                        ),
+                    )
+                # ── auto-install requirements in isolated venv ──
+                req_file = work_dir / "requirements.txt"
+                if req_file.exists() and req_file.stat().st_size > 0:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: subprocess.run(
+                            [python_exe, "-m", "pip", "install", "-q",
+                             "-r", str(req_file)],
+                            cwd=str(work_dir),
+                            capture_output=True, timeout=120,
+                        ),
+                    )
+                cls._write_boot_loader(work_dir)
+                entry = work_dir / "bot.py"
+                if not entry.exists():
+                    py_files = [f for f in work_dir.glob("*.py") if f.name != "_wolf_boot.py"]
+                    if not py_files:
+                        slug_dir = work_dir / slug
+                        if slug_dir.exists():
+                            py_files = [f for f in slug_dir.glob("*.py") if f.name != "_wolf_boot.py"]
+                    entry = py_files[0] if py_files else entry
+                cmd = [python_exe, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
+            else:
+                entry = work_dir / "index.php"
+                if not entry.exists():
+                    php_files = list(work_dir.glob("*.php"))
+                    if not php_files:
+                        slug_dir = work_dir / slug
+                        if slug_dir.exists():
+                            php_files = list(slug_dir.glob("*.php"))
+                    entry = php_files[0] if php_files else entry
+                cmd = ["php", "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
+
+            cf_proxy = os.environ.get("CF_PROXY", "")
+            env = {
+                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+                "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+                "LC_ALL": os.environ.get("LC_ALL", "en_US.UTF-8"),
+                "HOME": str(work_dir),
+                "TMPDIR": str(work_dir),
+                "PYTHONUNBUFFERED": "1",
+                "PYTHONNOUSERSITE": "1",
+                "PORT": str(port),
+                "CF_PROXY": cf_proxy,
+            }
+
+            # Open log file only after all prep work succeeded
+            log_fh = open(log_file, "w", encoding="utf-8")
+
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=log_fh,
@@ -260,7 +263,9 @@ with open(_user, "rb") as _f:
             }
 
         except Exception as e:
-            log_fh.close()
+            if log_fh:
+                log_fh.close()
+            cls._release_port(port)
             logger.error(f"Failed to start bot {name}: {e}")
             return {"status": "error", "message": str(e)}
 

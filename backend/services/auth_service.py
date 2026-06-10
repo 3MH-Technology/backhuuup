@@ -11,7 +11,7 @@ from sqlalchemy import select
 from config import settings
 from models.database import get_session
 from models.user import User
-from services.email_service import generate_code
+from services.email_service import generate_code, send_verification
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security_scheme = HTTPBearer()
@@ -126,27 +126,23 @@ class AuthService:
         user.reset_cooldown_until = now + timedelta(seconds=cooldowns[min(level, len(cooldowns) - 1)])
         await session.commit()
 
-        return {"message": "تم إرسال كود إعادة التعيين. الكود صالح لمدة 5 دقائق."}
+        # Send reset code via email if user has an email address
+        email_sent = False
+        if user.email:
+            email_sent = send_verification(user.email, code)
+
+        return {
+            "message": "تم إنشاء كود إعادة التعيين. الكود صالح لمدة 5 دقائق.",
+            "reset_code": code,
+            "email_sent": email_sent,
+        }
 
     @staticmethod
     async def get_reset_code(username: str, request: Request, session: AsyncSession) -> dict:
-        result = await session.execute(select(User).where(User.username == username))
-        user = result.scalar_one_or_none()
-        if not user or not user.reset_code:
-            raise HTTPException(status_code=404, detail="لم يتم طلب كود إعادة تعيين")
-
-        now = datetime.now(timezone.utc)
-        if user.reset_code_expires_at and now > user.reset_code_expires_at:
-            user.reset_code = None
-            user.reset_code_expires_at = None
-            await session.commit()
-            raise HTTPException(status_code=400, detail="انتهت صلاحية الكود. أعد المحاولة.")
-
-        client_ip = request.client.host if request.client else None
-        if user.reset_code_ip and client_ip and user.reset_code_ip != client_ip:
-            raise HTTPException(status_code=403, detail="الكود صالح فقط من نفس عنوان IP الذي طلبه.")
-
-        return {"reset_code": user.reset_code}
+        # SECURITY: This endpoint has been removed.
+        # Reset codes are now returned inline in forgot_password() response.
+        # Previously, an unauthenticated GET could expose reset codes to anyone.
+        raise HTTPException(status_code=404, detail="Endpoint removed for security reasons")
 
     @staticmethod
     async def reset_password(username: str, code: str, new_password: str, request: Request, session: AsyncSession) -> dict:

@@ -29,7 +29,7 @@ cd "${APP_DIR}"
 exec python -m uvicorn main:app \
     --host 0.0.0.0 \
     --port 7860 \
-    --log-level info \
+    --log-level "${LOG_LEVEL:-info}" \
     --workers 1 \
     --no-access-log \
     --proxy-headers \

@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import os
+import re
 import subprocess
 import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,6 +17,8 @@ import aiohttp
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from pythonjsonlogger import json as jsonlogger
+
 from config import settings, BASE_DIR
 from services.limiter import limiter
 from models.database import init_db, async_session
@@ -24,10 +28,16 @@ from services.container_manager import ContainerManager
 
 MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
 
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format="%(asctime)s [%(levelname)s] 🐺 %(name)s: %(message)s",
-)
+# ── Structured JSON Logging ───────────────────────────────────────
+_log_handler = logging.StreamHandler()
+_log_handler.setFormatter(jsonlogger.JsonFormatter(
+    fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
+    rename_fields={"levelname": "level", "asctime": "ts"},
+))
+logging.root.handlers.clear()
+logging.root.addHandler(_log_handler)
+logging.root.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
+
 logger = logging.getLogger("wolfhost")
 
 WOLF_BANNER = r"""
@@ -120,7 +130,18 @@ async def lifespan(app: FastAPI):
             pass
 
     SelfHealer.stop()
-    logger.info("🐺 Wolf Host shut down gracefully")
+
+    # Gracefully stop all running bot processes
+    running_bots = list(ContainerManager._instances.keys())
+    if running_bots:
+        logger.info(f"Stopping {len(running_bots)} running bot(s) on shutdown...")
+        for cid in running_bots:
+            try:
+                await ContainerManager.stop_bot(cid)
+            except Exception as e:
+                logger.warning(f"Error stopping bot {cid} during shutdown: {e}")
+
+    logger.info("Wolf Host shut down gracefully")
 
 
 app = FastAPI(
@@ -177,6 +198,9 @@ async def bot_proxy(request: Request, path: str):
     if not cf_proxy:
         return JSONResponse({"ok": False, "error_code": 502, "description": "Proxy not configured"}, status_code=502)
     clean_path = path.replace("..", "").replace("@", "").replace("//", "/")
+    # SSRF hardening: only allow safe URL path characters
+    if not re.match(r'^[a-zA-Z0-9/_\-.?&=%]*$', clean_path):
+        return JSONResponse({"ok": False, "error_code": 400, "description": "Invalid path characters"}, status_code=400)
     target = f"{cf_proxy}/{clean_path}"
     if request.url.query:
         target += f"?{request.url.query}"
@@ -205,6 +229,19 @@ async def body_size_limit(request: Request, call_next):
     return await call_next(request)
 
 
+@app.get("/api/health")
+async def health_check():
+    """Lightweight health check — verifies DB connectivity."""
+    from sqlalchemy import text as sa_text
+    try:
+        async with async_session() as session:
+            await session.execute(sa_text("SELECT 1"))
+        return {"status": "healthy", "db": "ok"}
+    except Exception as e:
+        logger.error(f"Health check DB failure: {e}")
+        return JSONResponse({"status": "unhealthy", "db": "error"}, status_code=503)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -215,6 +252,15 @@ async def security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self)"
     response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://wolf-host.pages.dev https://*.hf.space; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
     return response
 
 

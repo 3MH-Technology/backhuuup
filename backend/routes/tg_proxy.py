@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 
 import aiohttp
 from fastapi import APIRouter, Request
@@ -14,10 +15,27 @@ router = APIRouter(prefix="/api/tg", tags=["Telegram Proxy"])
 
 TG_API_BASE = os.environ.get("TELEGRAM_API_BASE", "https://api.telegram.org")
 
+# Telegram bot token format: digits:alphanumeric-hyphen-underscore
+_TG_TOKEN_RE = re.compile(r'^[0-9]+:[A-Za-z0-9_\-]+$')
+# Whitelist for safe API method paths
+_TG_PATH_RE = re.compile(r'^[a-zA-Z0-9/_\-.?&=%]*$')
+
+
+def _validate_tg_token(token: str) -> bool:
+    return bool(_TG_TOKEN_RE.match(token))
+
+
+def _validate_tg_path(path: str) -> bool:
+    return bool(_TG_PATH_RE.match(path))
+
 
 @router.api_route("/{token}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 @limiter.limit("60/minute")
 async def tg_proxy(request: Request, token: str, path: str):
+    if not _validate_tg_token(token):
+        return JSONResponse({"ok": False, "error": "Invalid bot token format"}, status_code=400)
+    if not _validate_tg_path(path):
+        return JSONResponse({"ok": False, "error": "Invalid path"}, status_code=400)
     target = f"{TG_API_BASE}/bot{token}/{path}"
     body = await request.body()
     headers_to_forward = {
@@ -48,6 +66,10 @@ async def tg_proxy(request: Request, token: str, path: str):
 @router.api_route("/file/{token}/{path:path}", methods=["GET"])
 @limiter.limit("30/minute")
 async def tg_file_proxy(request: Request, token: str, path: str):
+    if not _validate_tg_token(token):
+        return JSONResponse({"ok": False, "error": "Invalid bot token format"}, status_code=400)
+    if not _validate_tg_path(path):
+        return JSONResponse({"ok": False, "error": "Invalid path"}, status_code=400)
     target = f"{TG_API_BASE}/file/bot{token}/{path}"
     timeout = aiohttp.ClientTimeout(total=60, connect=10)
 

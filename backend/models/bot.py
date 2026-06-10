@@ -1,10 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, CheckConstraint, func
 from sqlalchemy.orm import relationship
 from .database import Base
 
 
 class Bot(Base):
     __tablename__ = "bots"
+    __table_args__ = (
+        CheckConstraint("bot_type IN ('python', 'php')", name="ck_bot_type"),
+        CheckConstraint("status IN ('running', 'stopped', 'crashed')", name="ck_bot_status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -21,7 +25,8 @@ class Bot(Base):
 
     webhook_url = Column(String(512), nullable=True)
     webhook_active = Column(Boolean, default=False)
-    webhook_token = Column(String(64), nullable=True, index=True)
+    webhook_token = Column(String(256), nullable=True)       # Fernet-encrypted (for display)
+    webhook_token_hash = Column(String(64), nullable=True, index=True)  # SHA-256 hash (for SQL lookups)
 
     restart_count = Column(Integer, default=0)
     expires_at = Column(DateTime(timezone=True), nullable=True)

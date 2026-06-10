@@ -89,11 +89,11 @@ function switchDetailTab(tab) {
 }
 
 // ========== Authentication ==========
-async function login(email, password) {
+async function login(username, password) {
   const res = await fetch(`${API}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Login failed');
@@ -102,11 +102,12 @@ async function login(email, password) {
   return data;
 }
 
-async function register(username, email, password) {
+async function register(username, password) {
+  const deviceFp = typeof getDeviceFingerprint === 'function' ? getDeviceFingerprint() : '';
   const res = await fetch(`${API}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify({ username, password, device_fingerprint: deviceFp }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Registration failed');
@@ -175,7 +176,7 @@ function renderBotsList(bots) {
 }
 
 async function createBot(name, botType, code, requirements) {
-  const res = await fetch(`${API}/api/bots/`, {
+  const res = await fetch(`${API}/api/bots/code`, {
     method: 'POST',
     headers: state.getHeaders(),
     body: JSON.stringify({ name, bot_type: botType, main_file: code, requirements }),
@@ -311,6 +312,16 @@ async function handleSaveCode() {
   }
 }
 
+// ========== Utility: Safe log appending (XSS-proof) ==========
+function appendLog(el, text) {
+  const lines = text.split('\n');
+  lines.forEach((line, i) => {
+    el.appendChild(document.createTextNode(line));
+    if (i < lines.length - 1) el.appendChild(document.createElement('br'));
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
 // ========== Live Logs via WebSocket ==========
 function connectLogs(botId) {
   state.cleanupWebSocket();
@@ -319,16 +330,18 @@ function connectLogs(botId) {
   consoleEl.innerHTML = '<span class="text-gray-600">// جاري الاتصال بخادم السجلات...</span>';
   indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> متصل...';
 
-  state.ws = new WebSocket(`${WS_BASE}/api/logs/ws/${botId}`);
+  state.ws = new WebSocket(`${WS_BASE}/api/logs/ws/${botId}?token=${state.token}`);
 
   state.ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
       if (msg.type === 'log') {
-        consoleEl.innerHTML += msg.data.replace(/\n/g, '<br>');
-        consoleEl.scrollTop = consoleEl.scrollHeight;
+        appendLog(consoleEl, msg.data);
       } else if (msg.type === 'status' && msg.data === 'stopped') {
-        consoleEl.innerHTML += '\n<span class="text-red-400">// البوت متوقف</span>\n';
+        const stoppedSpan = document.createElement('span');
+        stoppedSpan.className = 'text-red-400';
+        stoppedSpan.textContent = '\n// البوت متوقف\n';
+        consoleEl.appendChild(stoppedSpan);
       }
     } catch (e) { /* ignore */ }
   };

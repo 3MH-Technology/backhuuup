@@ -44,6 +44,11 @@ class Base(DeclarativeBase):
 
 
 async def _add_missing_columns(conn):
+    """Apply incremental migrations. Log failures instead of swallowing them.
+
+    NOTE: This is a lightweight migration approach. For production use,
+    consider adopting Alembic for proper schema versioning and rollback support.
+    """
     migrations = [
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS is_upload BOOLEAN DEFAULT FALSE",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS upload_path VARCHAR(512)",
@@ -51,25 +56,27 @@ async def _add_missing_columns(conn):
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_active BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_messages_today INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_date VARCHAR(20)",
-
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(10)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_date VARCHAR(20)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_attempts_today INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_cooldown_until TIMESTAMP WITH TIME ZONE",
-        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token VARCHAR(64)",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token VARCHAR(256)",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
         "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_ip VARCHAR(45)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token_hash VARCHAR(64)",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS slug VARCHAR(255)",
     ]
     for stmt in migrations:
         try:
             await conn.execute(text(stmt))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Migration skipped (column may already exist): {e}")
 
 
 async def init_db():
@@ -79,14 +86,13 @@ async def init_db():
         if os.environ.get("RESET_DB") == "1":
             await conn.execute(text("DROP SCHEMA public CASCADE"))
             await conn.execute(text("CREATE SCHEMA public"))
-            logger.warning("⚠️ Database reset forced via RESET_DB=1")
+            logger.warning("Database reset forced via RESET_DB=1")
         else:
             try:
                 await conn.run_sync(Base.metadata.create_all)
-            except Exception:
-                await conn.execute(text("DROP SCHEMA public CASCADE"))
-                await conn.execute(text("CREATE SCHEMA public"))
-                await conn.run_sync(Base.metadata.create_all)
+            except Exception as e:
+                logger.error(f"Schema creation failed: {e}. Run migrations manually or set RESET_DB=1 to recreate.")
+                raise
         await _add_missing_columns(conn)
 
 

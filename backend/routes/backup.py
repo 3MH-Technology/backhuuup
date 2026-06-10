@@ -44,11 +44,14 @@ async def trigger_backup(
         )
         if result.returncode == 0:
             logger.info("Database backup completed successfully")
-            return {"status": "success", "output": result.stdout.strip()}
+            return {"status": "success", "message": "Backup completed successfully"}
         else:
+            # Log details server-side only — never expose stderr to the client
             logger.error(f"Backup failed: {result.stderr}")
-            return {"status": "error", "error": result.stderr.strip()}
+            return {"status": "error", "error": "Backup failed. Check server logs for details."}
     except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Backup timed out after 120s")
+        logger.error("Backup timed out after 120s")
+        raise HTTPException(status_code=504, detail="Backup timed out")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Backup exception: {e}")
+        raise HTTPException(status_code=500, detail="Internal backup error")
