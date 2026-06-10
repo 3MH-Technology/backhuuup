@@ -90,6 +90,16 @@ async def _add_missing_columns(conn):
     except Exception as e:
         logger.warning(f"webhook_token resize skipped: {e}")
 
+    # Update check constraint to include 'static' bot type
+    try:
+        await conn.execute(text("ALTER TABLE bots DROP CONSTRAINT IF EXISTS ck_bot_type"))
+        await conn.execute(text(
+            "ALTER TABLE bots ADD CONSTRAINT ck_bot_type "
+            "CHECK (bot_type IN ('python', 'php', 'static'))"
+        ))
+    except Exception as e:
+        logger.warning(f"Bot type constraint update skipped: {e}")
+
 
 async def init_db():
     async with engine.begin() as conn:

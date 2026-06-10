@@ -6,7 +6,7 @@ from .database import Base
 class Bot(Base):
     __tablename__ = "bots"
     __table_args__ = (
-        CheckConstraint("bot_type IN ('python', 'php')", name="ck_bot_type"),
+        CheckConstraint("bot_type IN ('python', 'php', 'static')", name="ck_bot_type"),
         CheckConstraint("status IN ('running', 'stopped', 'crashed')", name="ck_bot_status"),
     )
 
@@ -14,7 +14,7 @@ class Bot(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     slug = Column(String(255), nullable=False, index=True, unique=True)
-    bot_type = Column(String(20), nullable=False)  # "python" or "php"
+    bot_type = Column(String(20), nullable=False)  # "python", "php", or "static"
     status = Column(String(20), default="stopped", index=True)  # running, stopped, crashed
     container_id = Column(String(64), nullable=True, index=True)
     main_file = Column(Text, nullable=True)

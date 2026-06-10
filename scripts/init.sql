@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS bots (
     user_id         INTEGER      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name            VARCHAR(255) NOT NULL,
     slug            VARCHAR(255) NOT NULL UNIQUE,
-    bot_type        VARCHAR(20)  NOT NULL CHECK (bot_type IN ('python', 'php')),
+    bot_type        VARCHAR(20)  NOT NULL CHECK (bot_type IN ('python', 'php', 'static')),
     status          VARCHAR(20)  DEFAULT 'stopped' CHECK (status IN ('running', 'stopped', 'crashed')),
     container_id    VARCHAR(64),
     main_file       TEXT,

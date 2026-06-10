@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolf Host — التوثيق</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <script>
+(function(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)})})();
+</script>
+  <style>
+    * { font-family: 'Tajawal', system-ui, sans-serif; }
+    body { background: #0a0f1e; }
+    .gradient-text { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; backdrop-filter: blur(12px); }
+    .card-hover:hover { border-color: rgba(255,255,255,0.15); }
+    .nav-link { color: rgba(255,255,255,0.5); transition: 0.2s; }
+    .nav-link:hover, .nav-link.active { color: #fff; }
+    .nav-link.active { border-bottom: 2px solid #60a5fa; }
+    .section-link { display: block; padding: 8px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 14px; transition: 0.15s; }
+    .section-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .section-link.active { background: rgba(96,165,250,0.1); color: #60a5fa; font-weight: 500; }
+    code { background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; font-size: 13px; color: #fbbf24; font-family: 'Courier New', monospace; }
+    pre { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; overflow-x: auto; }
+    pre code { background: transparent; padding: 0; }
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .tag-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .tag-purple { background: rgba(168,85,247,0.15); color: #a78bfa; }
+    .tag-emerald { background: rgba(5,150,105,0.15); color: #34d399; }
+    .tag-amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .toc { position: sticky; top: 24px; }
+  </style>
+</head>
+<body>
+  <nav class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <img src="/static/logo.jpg" class="w-9 h-9 rounded-lg object-cover border border-gray-700/50">
+      <span class="text-white font-black">Wolf Host</span>
+    </div>
+    <div class="flex items-center gap-4 text-sm">
+      <a href="/" class="text-gray-500 hover:text-white transition">الرئيسية</a>
+      <a href="/dashboard" class="text-gray-500 hover:text-white transition">اللوحة</a>
+      <a href="/docs" class="text-white font-medium border-b-2 border-blue-400">التوثيق</a>
+      <a href="/register" class="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1.5 rounded-lg text-white font-medium">ابدأ</a>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto px-4 py-8 flex gap-8">
+    <!-- Sidebar TOC -->
+    <aside class="hidden lg:block w-56 flex-shrink-0">
+      <div class="toc space-y-1">
+        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">التوثيق</div>
+        <a href="#getting-started" class="section-link">البداية السريعة</a>
+        <a href="#bot-types" class="section-link">أنواع البوتات</a>
+        <a href="#python" class="section-link pr-4" style="font-size:13px;">─ بايثون</a>
+        <a href="#php" class="section-link pr-4" style="font-size:13px;">─ PHP</a>
+        <a href="#static" class="section-link pr-4" style="font-size:13px;">─ مواقع Static</a>
+        <a href="#upload" class="section-link">رفع الملفات</a>
+        <a href="#webhook" class="section-link">Webhook</a>
+        <a href="#public-url" class="section-link">الرابط العام</a>
+        <a href="#limits" class="section-link">الحدود والقيود</a>
+        <a href="#troubleshooting" class="section-link">مشاكل وحلول</a>
+        <a href="#faq" class="section-link">أسئلة شائعة</a>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="flex-1 min-w-0 space-y-12">
+      <div class="card p-6 md:p-8">
+        <h1 class="text-3xl font-black text-white">توثيق منصة Wolf Host 🐺</h1>
+        <p class="text-gray-400 mt-2">دليل شامل لاستخدام المنصة — من إنشاء الحساب إلى نشر بوتك.</p>
+      </div>
+
+      <!-- Getting Started -->
+      <section id="getting-started">
+        <h2 class="text-2xl font-bold text-white mb-4">🚀 البداية السريعة</h2>
+        <div class="card p-6 space-y-4">
+          <p class="text-gray-400">منصة عربية مجانية لاستضافة بوتات التيليجرام (بايثون)، سكربتات PHP، والمواقع الثابتة HTML/CSS/JS.</p>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 font-bold text-sm flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+              <div><span class="text-white font-medium">أنشئ حساب</span><p class="text-gray-500 text-sm">سجل بسم مستخدم وكلمة مرور. حساب واحد لكل جهاز.</p></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 font-bold text-sm flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+              <div><span class="text-white font-medium">أنشئ بوت</span><p class="text-gray-500 text-sm">اختر نوع البوت (بايثون، PHP، أو موقع Static). اكتب الكود أو ارفع ملف.</p></div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-sm flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+              <div><span class="text-white font-medium">شغّل البوت</span><p class="text-gray-500 text-sm">اضغط "تشغيل" — البوت يشتغل فوراً مع Webhook ورابط عام.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bot Types -->
+      <section id="bot-types">
+        <h2 class="text-2xl font-bold text-white mb-4">🤖 أنواع البوتات</h2>
+        <div class="space-y-4">
+          <div id="python" class="card p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="tag tag-blue">بايثون</span>
+              <span class="text-sm text-gray-500">بوتات التيليجرام</span>
+            </div>
+            <p class="text-gray-400 text-sm mb-3">استخدم أي مكتبة تيليجرام (python-telegram-bot، telebot، aiogram). يتم عزل كل بوت في بيئة افتراضية خاصة مع تثبيت المتطلبات تلقائياً.</p>
+            <div class="bg-black/40 rounded-xl p-4 text-sm space-y-2">
+              <div><span class="text-gray-500">الملف الرئيسي:</span> <code>bot.py</code></div>
+              <div><span class="text-gray-500">المتطلبات:</span> <code>requirements.txt</code></div>
+              <div><span class="text-gray-500">نظام البدء:</span> <code>python bot.py</code></div>
+            </div>
+          </div>
+
+          <div id="php" class="card p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="tag tag-purple">PHP</span>
+              <span class="text-sm text-gray-500">سكربتات ويب</span>
+            </div>
+            <p class="text-gray-400 text-sm mb-3">شغل أي سكربت PHP. يدعم Webhook مباشر لاستقبال طلبات HTTP. معزول بـ php.ini مخصص مع تعطيل الدوال الخطيرة.</p>
+            <div class="bg-black/40 rounded-xl p-4 text-sm space-y-2">
+              <div><span class="text-gray-500">الملف الرئيسي:</span> <code>index.php</code></div>
+              <div><span class="text-gray-500">نظام البدء:</span> <code>php -S 0.0.0.0:{port} -c .php/php.ini</code></div>
+              <div><span class="text-gray-500">الذاكرة:</span> 32MB، <span class="text-gray-500">المدة:</span> 30 ثانية</div>
+            </div>
+          </div>
+
+          <div id="static" class="card p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="tag tag-emerald">Static</span>
+              <span class="text-sm text-gray-500">مواقع HTML/CSS/JS</span>
+            </div>
+            <p class="text-gray-400 text-sm mb-3">ارفع موقع ويب كامل (HTML, CSS, JS, JSON, XML, MD) كملف ZIP. يتم خدمته مباشرة عبر HTTP مع رابط عام فوري.</p>
+            <div class="bg-black/40 rounded-xl p-4 text-sm space-y-2">
+              <div><span class="text-gray-500">الملف الرئيسي:</span> <code>index.html</code></div>
+              <div><span class="text-gray-500">نظام البدء:</span> <code>python -m http.server {port}</code></div>
+              <div><span class="text-gray-500">الوصول:</span> رابط عام <code>/p/{slug}/</code></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Upload -->
+      <section id="upload">
+        <h2 class="text-2xl font-bold text-white mb-4">📦 رفع الملفات</h2>
+        <div class="card p-6 space-y-4">
+          <p class="text-gray-400">يمكنك إنشاء بوت بطريقتين:</p>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="bg-black/40 rounded-xl p-4">
+              <h4 class="text-white font-bold mb-2">✏️ كتابة كود</h4>
+              <p class="text-gray-500 text-sm">اكتب الكود مباشرة في المحرر. مناسب للتعديل السريع والتجربة.</p>
+            </div>
+            <div class="bg-black/40 rounded-xl p-4">
+              <h4 class="text-white font-bold mb-2">📁 رفع ملف</h4>
+              <p class="text-gray-500 text-sm">ارفع ملف مضغوط ZIP أو ملف فردي. يستخرج ZIP تلقائياً في مجلد البوت.</p>
+            </div>
+          </div>
+          <div class="text-sm text-gray-500">
+            <span class="text-gray-400">الامتدادات المسموحة:</span>
+            <span class="inline-flex flex-wrap gap-1.5 mt-1">
+              <code>.py</code> <code>.php</code> <code>.zip</code> <code>.html</code> <code>.css</code> <code>.js</code>
+              <code>.json</code> <code>.xml</code> <code>.md</code> <code>.htaccess</code> <code>.env.example</code>
+            </span>
+          </div>
+          <div class="text-sm text-gray-500"><span class="text-gray-400">الحد الأقصى:</span> 5MB لكل ملف، 10MB لكل طلب رفع.</div>
+        </div>
+      </section>
+
+      <!-- Webhook -->
+      <section id="webhook">
+        <h2 class="text-2xl font-bold text-white mb-4">🔗 Webhook</h2>
+        <div class="card p-6 space-y-4">
+          <p class="text-gray-400">الـ Webhook يسمح لموقعك أو تطبيقك بإرسال طلبات HTTP إلى البوت مباشرة.</p>
+          <div class="bg-black/40 rounded-xl p-4 text-sm space-y-2">
+            <div><span class="text-gray-500">الرابط:</span> <code class="text-yellow-300">https://wolf-host.pages.dev/api/webhook/{token}</code></div>
+            <div><span class="text-gray-500">الطريقة:</span> GET, POST, PUT, PATCH, DELETE</div>
+            <div><span class="text-gray-500">التحديد:</span> 120 طلب/دقيقة</div>
+          </div>
+          <div class="text-sm text-gray-500">
+            <p class="mb-2"><span class="text-gray-400">💡 مثال:</span> لربط بوت تيليجرام، استخدم الرابط كـ Webhook URL في BotFather:</p>
+            <pre><code>https://wolf-host.pages.dev/api/webhook/29b782eae9272db45941d468091f34e4</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Public URL -->
+      <section id="public-url">
+        <h2 class="text-2xl font-bold text-white mb-4">🌐 الرابط العام</h2>
+        <div class="card p-6 space-y-4">
+          <p class="text-gray-400">كل بوت يحصل على رابط عام بدون توكن — مناسب للمواقع الثابتة، APIs، والسكربتات.</p>
+          <div class="bg-black/40 rounded-xl p-4 text-sm">
+            <code class="text-emerald-300">https://wolf-host.pages.dev/p/{slug}/</code>
+          </div>
+          <p class="text-sm text-gray-500">الرابط العام لا يتطلب توكن ويمكن مشاركته مع أي شخص. يدعم المسارات الفرعية (مثال: <code>/p/{slug}/page.html</code>).</p>
+        </div>
+      </section>
+
+      <!-- Limits -->
+      <section id="limits">
+        <h2 class="text-2xl font-bold text-white mb-4">📊 الحدود والقيود</h2>
+        <div class="card p-6">
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">البوتات لكل مستخدم</span><span class="text-white font-bold">3 بوتات</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">الذاكرة لكل بوت</span><span class="text-white font-bold">128 MB</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">وقت المعالجة</span><span class="text-white font-bold">60 ثانية</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">العمليات الفرعية</span><span class="text-white font-bold">50 عملية</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">حجم الرفع</span><span class="text-white font-bold">5 MB</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">مدة البوت</span><span class="text-white font-bold">4 أيام (قابل للتجديد)</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">الـ API rate limit</span><span class="text-white font-bold">5-120/دقيقة</span></div>
+            <div class="flex items-center justify-between p-3 bg-black/40 rounded-xl"><span class="text-gray-400">Webhook rate limit</span><span class="text-white font-bold">120/دقيقة</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Troubleshooting -->
+      <section id="troubleshooting">
+        <h2 class="text-2xl font-bold text-white mb-4">🔧 مشاكل وحلول</h2>
+        <div class="space-y-3">
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">البوت لا يشتغل</h4>
+            <p class="text-gray-500 text-sm">تأكد من عدم وجود أخطاء في الكود. تفقد السجلات في لوحة التحكم. إذا استمر، أعد تشغيل البوت.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">البوت يتوقف فجأة</h4>
+            <p class="text-gray-500 text-sm">قد يكون استهلك الذاكرة المسموحة (128MB). حلل استهلاك الموارد في لوحة التحكم. قد يحتاج الكود تحسين.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">خطأ في رفع ZIP</h4>
+            <p class="text-gray-500 text-sm">تأكد أن الملفات داخل ZIP من الامتدادات المسموحة. تأكد من عدم وجود ملفات ضارة أو روابط رمزية.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">الموقع Static لا يظهر</h4>
+            <p class="text-gray-500 text-sm">تأكد من وجود ملف <code>index.html</code> في جذر الـ ZIP. الرابط العام: <code>/p/{slug}/</code></p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">البوت منتهي الصلاحية</h4>
+            <p class="text-gray-500 text-sm">حل الكابتشا في لوحة التحكم لتجديد البوت 4 أيام إضافية. البوتات تنتهي تلقائياً بعد 4 أيام.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq">
+        <h2 class="text-2xl font-bold text-white mb-4">❓ أسئلة شائعة</h2>
+        <div class="space-y-3">
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">هل المنصة مجانية؟</h4>
+            <p class="text-gray-500 text-sm">نعم، مجانية 100% ولا توجد خطط للدفع حالياً.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">كم بوت أستطيع إنشاؤه؟</h4>
+            <p class="text-gray-500 text-sm">3 بوتات كحد أقصى لكل مستخدم. يمكنك حذف بوت قديم لإنشاء جديد.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">هل يدعم بايثون 3.XX؟</h4>
+            <p class="text-gray-500 text-sm">يدعم الإصدار المثبت على الخادم (Python 3.x). يتم تثبيت المتطلبات عبر pip في بيئة افتراضية.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">هل يمكن استخدام SQLite؟</h4>
+            <p class="text-gray-500 text-sm">نعم، البوتات لها صلاحية كتابة في مجلدها الخاص. يمكن استخدام SQLite أو ملفات JSON للتخزين.</p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">كيف أتواصل مع الدعم؟</h4>
+            <p class="text-gray-500 text-sm">عبر تيليجرام: <a href="https://t.me/Wolfhost_1" target="_blank" class="text-emerald-400 hover:underline">@Wolfhost_1</a></p>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-white font-bold mb-1">ماذا يحدث عند انتهاء صلاحية البوت؟</h4>
+            <p class="text-gray-500 text-sm">يتوقف البوت تلقائياً. يمكنك تجديده بحل كابتشا بسيط. البيانات تبقى محفوظة.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="border-t border-gray-800/50 pt-8 pb-4 text-center text-sm text-gray-600">
+        <div class="flex items-center justify-center gap-2 mb-3">
+          <img src="/static/logo.jpg" class="w-5 h-5 rounded object-cover">
+          <span class="text-white font-bold">Wolf Host</span>
+        </div>
+        <p>مبني بـ ❤️ بواسطة الذئب الأبيض 🐺</p>
+        <div class="flex items-center justify-center gap-4 mt-3">
+          <a href="https://t.me/j49_c" target="_blank" class="hover:text-blue-400 transition">@j49_c</a>
+          <a href="https://t.me/EQJ_1" target="_blank" class="hover:text-blue-400 transition">القناة</a>
+          <a href="https://t.me/Wolfhost_1" target="_blank" class="hover:text-emerald-400 transition">@Wolfhost_1</a>
+          <a href="https://x.com/wolfhost_1" target="_blank" class="hover:text-blue-400 transition">@wolfhost_1</a>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // Highlight active section on scroll
+    const sections = document.querySelectorAll('section[id]');
+    const links = document.querySelectorAll('.section-link');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const activeLink = document.querySelector(`.section-link[href="#${entry.target.id}"]`);
+          if (activeLink) activeLink.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-80px 0px -50% 0px' });
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>

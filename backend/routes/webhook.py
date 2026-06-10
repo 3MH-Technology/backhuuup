@@ -89,6 +89,31 @@ async def _proxy(request: Request, path: str, x_bot_slug: str):
     return await _proxy_bot(request, bot, path)
 
 
+WOLF_HEADER = b"""<!-- Wolf Host Platform -->
+<div id="wolf-host-bar" style="position:fixed;top:0;left:0;right:0;z-index:2147483647;background:linear-gradient(135deg,#0f0f23 0%,#1a1a3e 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:0 16px;display:flex;align-items:center;gap:10px;direction:ltr;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;border-bottom:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 30px rgba(0,0,0,0.4);height:48px;box-sizing:border-box;">
+  <img src="https://wolf-host.pages.dev/static/logo.jpg" onerror="this.style.display='none'" style="height:28px;width:28px;border-radius:6px;flex-shrink:0;object-fit:cover;">
+  <span style="color:#fff;font-weight:700;font-size:15px;letter-spacing:0.4px;">Wolf Host</span>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:auto;letter-spacing:0.2px;">Bot Hosting Platform</span>
+  <a href="https://wolf-host.pages.dev/dashboard" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.4);font-size:11px;text-decoration:none;border:1px solid rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px;transition:0.2s;white-space:nowrap;" onmouseover="this.style.borderColor='rgba(255,255,255,0.3)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.4)'">Dashboard</a>
+</div>
+<style>
+body { margin-top: 56px !important; }
+#wolf-host-bar + * { margin-top: 0 !important; }
+@media (max-width: 640px){#wolf-host-bar{gap:6px;padding:0 10px;height:44px}body{margin-top:52px!important}#wolf-host-bar span:last-of-type{display:none}}
+</style>"""
+
+
+def _inject_branding(html_body: bytes) -> bytes:
+    """Inject Wolf Host header into HTML responses."""
+    body_tag = b"<body"
+    idx = html_body.find(body_tag)
+    if idx != -1:
+        close = html_body.find(b">", idx)
+        if close != -1:
+            return html_body[:close+1] + WOLF_HEADER + html_body[close+1:]
+    return WOLF_HEADER + html_body
+
+
 async def _stream(request: Request, target_url: str, slug: str):
     body = await request.body()
     headers_to_forward = {
@@ -101,26 +126,51 @@ async def _stream(request: Request, target_url: str, slug: str):
     headers_to_forward.pop("cf-connecting-ip", None)
 
     timeout = aiohttp.ClientTimeout(total=25, connect=5)
+    sess = aiohttp.ClientSession(timeout=timeout)
 
-    async def stream_response():
+    try:
+        resp = await sess.request(
+            method=request.method,
+            url=target_url,
+            headers=headers_to_forward,
+            data=body,
+        )
+    except aiohttp.ClientConnectorError:
+        await sess.close()
+        return {"ok": False, "error": "Bot unreachable"}
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        await sess.close()
+        logger.warning(f"Webhook proxy failed for {slug}: {e}")
+        return {"ok": False, "error": "Proxy upstream error"}
+
+    content_type = resp.headers.get("Content-Type", "application/json")
+    is_html = "text/html" in content_type
+
+    async def stream_response(resp, sess, is_html):
         try:
-            async with aiohttp.ClientSession(timeout=timeout) as sess:
-                async with sess.request(
-                    method=request.method,
-                    url=target_url,
-                    headers=headers_to_forward,
-                    data=body,
-                ) as resp:
-                    async for chunk in resp.content.iter_chunked(8192):
-                        yield chunk
-        except aiohttp.ClientConnectorError:
-            logger.error(f"Webhook proxy: cannot connect to bot {slug}")
-            yield b'{"ok":false,"error":"Bot unreachable"}'
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            logger.warning(f"Webhook proxy failed for {slug}: {e}")
-            yield b'{"ok":false,"error":"Proxy upstream error"}'
+            buffer = b""
+            injected = False
+            async for chunk in resp.content.iter_chunked(8192):
+                if is_html and not injected:
+                    buffer += chunk
+                    if len(buffer) > 131072 or b"<body" in buffer:
+                        yield _inject_branding(buffer)
+                        injected = True
+                        buffer = b""
+                else:
+                    yield chunk
+            if is_html and not injected and buffer:
+                yield _inject_branding(buffer)
+            elif buffer:
+                yield buffer
+        finally:
+            resp.release()
+            await sess.close()
 
-    return StreamingResponse(stream_response(), media_type="application/json")
+    return StreamingResponse(
+        stream_response(resp, sess, is_html),
+        media_type=content_type,
+    )
 
 
 # ── Public bot proxy by slug (no webhook token required) ──

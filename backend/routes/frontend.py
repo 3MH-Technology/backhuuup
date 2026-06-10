@@ -48,3 +48,8 @@ async def ai_page():
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page():
     return _render_html("forgot_password.html")
+
+
+@router.get("/docs", response_class=HTMLResponse)
+async def docs_page():
+    return _render_html("docs.html")

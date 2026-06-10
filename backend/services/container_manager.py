@@ -21,7 +21,7 @@ from config import settings
 logger = logging.getLogger("wolfhost.container")
 
 BOTS_DIR = Path("/app/data/bots")
-ALLOWED_EXTENSIONS = {".py", ".php", ".txt"}
+ALLOWED_EXTENSIONS = {".py", ".php", ".txt", ".html", ".css", ".js", ".json", ".xml", ".md", ".htaccess", ".env.example"}
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024
 MAX_ZIP_SIZE = 10 * 1024 * 1024
 
@@ -129,7 +129,12 @@ class ContainerManager:
 
     @staticmethod
     def _write_main_file(work_dir: Path, bot_type: str, content: str):
-        filename = "bot.py" if bot_type == "python" else "index.php"
+        if bot_type == "python":
+            filename = "bot.py"
+        elif bot_type == "php":
+            filename = "index.php"
+        else:
+            return  # static bots don't need a main file
         (work_dir / filename).write_text(content, encoding="utf-8")
 
     @staticmethod
@@ -207,7 +212,10 @@ with open(_user, "rb") as _f:
                 if rc != 0:
                     raise RuntimeError("PHP binary not found or not executable")
 
-            if bot_type == "python":
+            if bot_type == "static":
+                cmd = [sys.executable, "-m", "http.server", str(port), "-d", str(work_dir)]
+
+            elif bot_type == "python":
                 # ── isolated venv per bot ──
                 venv_path = work_dir / "venv"
                 python_exe = str(venv_path / "bin" / "python")
@@ -243,7 +251,7 @@ with open(_user, "rb") as _f:
                             py_files = [f for f in slug_dir.glob("*.py") if f.name != "_wolf_boot.py"]
                     entry = py_files[0] if py_files else entry
                 cmd = [python_exe, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
-            else:
+            elif bot_type == "php":
                 entry = work_dir / "index.php"
                 if not entry.exists():
                     php_files = list(work_dir.glob("*.php"))

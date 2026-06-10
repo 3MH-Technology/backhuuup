@@ -24,12 +24,12 @@ from services.captcha import CaptchaService
 
 router = APIRouter(prefix="/api/bots", tags=["Bot Management"])
 
-ALLOWED_UPLOAD_EXTS = {".py", ".php", ".zip"}
+ALLOWED_UPLOAD_EXTS = {".py", ".php", ".zip", ".html", ".css", ".js", ".json", ".xml", ".md", ".htaccess", ".env.example"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 class CreateBotCode(BaseModel):
     name: str = Field(..., min_length=2, max_length=100, pattern=r"^[^<>\"'&]+$")
-    bot_type: str = Field(..., pattern="^(python|php)$")
+    bot_type: str = Field(..., pattern="^(python|php|static)$")
     main_file: str = Field(..., min_length=1)
     requirements: str = ""
 
@@ -247,7 +247,7 @@ async def create_bot_upload(
         raise HTTPException(status_code=400, detail="اسم البوت يحتوي على أحرف غير مسموحة")
 
     if not _allowed_file(file.filename):
-        raise HTTPException(status_code=400, detail="الامتداد غير مسموح. فقط .py, .php, .zip")
+        raise HTTPException(status_code=400, detail="الامتداد غير مسموح. الامتدادات المسموحة: .py, .php, .zip, .html, .css, .js, .json, .xml, .md, .htaccess, .env.example")
 
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE * 2:

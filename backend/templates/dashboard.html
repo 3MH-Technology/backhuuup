@@ -50,6 +50,7 @@
       </div>
       <div class="flex items-center gap-3">
         <span id="usernameDisplay" class="text-sm text-gray-400 hidden md:inline"></span>
+        <a href="/docs" class="text-sm text-gray-500 hover:text-white transition hidden md:inline">التوثيق</a>
         <button onclick="logout()" class="text-sm text-gray-500 hover:text-red-400 transition">خروج</button>
       </div>
     </div>
@@ -69,6 +70,10 @@
       <div onclick="showSection('create-php')" id="navPhp" class="nav-btn">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
         بوت PHP جديد
+      </div>
+      <div onclick="showSection('create-static')" id="navStatic" class="nav-btn">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        موقع Static
       </div>
       <a href="/ai" class="nav-btn">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -92,6 +97,10 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             PHP
           </button>
+          <button onclick="showSection('create-static')" class="btn-icon" style="background:linear-gradient(135deg,#059669,#047857);color:white;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+            Static
+          </button>
         </div>
       </div>
 
@@ -105,6 +114,7 @@
           <div class="flex gap-3 justify-center">
             <button onclick="showSection('create-python')" class="btn-icon btn-python">+ بوت بايثون</button>
             <button onclick="showSection('create-php')" class="btn-icon btn-php">+ بوت PHP</button>
+            <button onclick="showSection('create-static')" class="btn-icon" style="background:linear-gradient(135deg,#059669,#047857);color:white;">+ موقع Static</button>
           </div>
         </div>
       </div>
@@ -242,6 +252,41 @@
         </div>
       </div>
     </section>
+
+    <!-- Section: Create Static -->
+    <section id="section-create-static" class="hidden space-y-4">
+      <button onclick="showSection('bots')" class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition">
+        <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        العودة للوحة التحكم
+      </button>
+      <div>
+        <h2 class="text-xl font-bold text-white">موقع Static جديد</h2>
+        <p class="text-gray-500 text-sm">ارفع موقع HTML/CSS/JS كامل — يدعم المسارات المتعددة، شغّل فوراً بدون إعدادات</p>
+      </div>
+      <div class="card p-5">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1.5">اسم الموقع</label>
+            <input type="text" id="staticName" maxlength="100" class="w-full px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none" placeholder="my-site">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1.5">رفع ملف ZIP</label>
+            <div class="upload-zone" onclick="document.getElementById('staticFileInput').click()">
+              <svg class="w-10 h-10 mx-auto text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <p class="text-gray-400 text-sm">اضغط لرفع <strong class="text-emerald-400">.zip</strong> يحتوي على <strong class="text-yellow-400">HTML</strong>، <strong class="text-blue-400">CSS</strong>، <strong class="text-orange-400">JS</strong></p>
+              <p class="text-gray-600 text-xs mt-0.5">الحد الأقصى: 5MB — الملف الرئيسي يكون <strong class="text-emerald-400">index.html</strong></p>
+              <input type="file" id="staticFileInput" accept=".zip" class="hidden" onchange="staticHandleFile()">
+            </div>
+            <div id="staticFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
+          </div>
+          <div id="staticCreateError" class="text-red-400 text-sm hidden"></div>
+          <button onclick="createStatic()" class="btn-icon w-full justify-center py-3" style="background:linear-gradient(135deg,#059669,#047857);color:white;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            رفع ونشر الموقع
+          </button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <!-- Captcha Modal -->
@@ -262,7 +307,7 @@
     const API = window.location.origin;
     let token = localStorage.getItem('token');
     let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    let selectedFile = { py: null, php: null };
+    let selectedFile = { py: null, php: null, static: null };
 
     if (!token) { window.location.href = '/login'; }
 
@@ -273,7 +318,7 @@
       document.querySelectorAll('[id^="section-"]').forEach(s => s.classList.add('hidden'));
       document.querySelectorAll('.nav-btn').forEach(n => { n.classList.remove('active'); });
       document.getElementById(`section-${section}`).classList.remove('hidden');
-      const navMap = { bots: 'navBots', 'create-python': 'navPython', 'create-php': 'navPhp' };
+      const navMap = { bots: 'navBots', 'create-python': 'navPython', 'create-php': 'navPhp', 'create-static': 'navStatic' };
       if (navMap[section]) { document.getElementById(navMap[section]).classList.add('active'); }
       if (section === 'bots') loadBots();
     }
@@ -356,6 +401,30 @@
       } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
     }
 
+    function staticHandleFile() {
+      const file = document.getElementById('staticFileInput').files[0];
+      if (!file) return;
+      selectedFile['static'] = file;
+      document.getElementById('staticFileName').textContent = '📦 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+      document.getElementById('staticFileName').classList.remove('hidden');
+    }
+
+    async function createStatic() {
+      const name = document.getElementById('staticName').value.trim();
+      const file = selectedFile['static'];
+      const errEl = document.getElementById('staticCreateError');
+      errEl.classList.add('hidden');
+      if (!name) { errEl.textContent = 'أدخل اسم الموقع'; errEl.classList.remove('hidden'); return; }
+      if (!file) { errEl.textContent = 'اختر ملف ZIP للرفع'; errEl.classList.remove('hidden'); return; }
+      const formData = new FormData();
+      formData.append('name', name); formData.append('bot_type', 'static'); formData.append('file', file);
+      try {
+        const res = await fetch(`${API}/api/bots/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+        if (res.ok) { document.getElementById('staticName').value = ''; selectedFile['static'] = null; document.getElementById('staticFileName').classList.add('hidden'); showSection('bots'); }
+        else { const d = await res.json(); errEl.textContent = d.detail || 'فشل الرفع'; errEl.classList.remove('hidden'); }
+      } catch (e) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('hidden'); }
+    }
+
     function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
 
     async function loadBots() {
@@ -378,8 +447,8 @@
           c.innerHTML = `
             <div class="flex items-start justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl ${bot.bot_type === 'python' ? 'bg-blue-500/10' : 'bg-purple-500/10'} flex items-center justify-center text-lg">
-                  ${bot.bot_type === 'python' ? '<span class="text-blue-400 font-bold">Py</span>' : '<span class="text-purple-400 font-bold">PHP</span>'}
+                <div class="w-10 h-10 rounded-xl ${bot.bot_type === 'python' ? 'bg-blue-500/10' : bot.bot_type === 'static' ? 'bg-emerald-500/10' : 'bg-purple-500/10'} flex items-center justify-center text-lg">
+                  ${bot.bot_type === 'python' ? '<span class="text-blue-400 font-bold">Py</span>' : bot.bot_type === 'static' ? '<span class="text-emerald-400 font-bold">St</span>' : '<span class="text-purple-400 font-bold">PHP</span>'}
                 </div>
                 <div>
                   <h3 class="font-bold text-white text-sm">${escapeHtml(bot.name)}</h3>
