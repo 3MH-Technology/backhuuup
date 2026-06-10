@@ -46,12 +46,12 @@ def _slugify(name: str) -> str:
     return name.strip("-")[:60] or "bot"
 
 
-async def _unique_slug(session: AsyncSession, base_slug: str, user_id: int) -> str:
+async def _unique_slug(session: AsyncSession, base_slug: str) -> str:
     slug = base_slug
     counter = 1
     while True:
         existing = (await session.execute(
-            select(Bot).where(Bot.slug == slug, Bot.user_id == user_id)
+            select(Bot).where(Bot.slug == slug)
         )).scalar_one_or_none()
         if not existing:
             return slug
@@ -175,7 +175,7 @@ async def create_bot_code(
             )
 
     base_slug = _slugify(req.name)
-    slug = await _unique_slug(session, base_slug, user.id)
+    slug = await _unique_slug(session, base_slug)
 
     bot = Bot(
         user_id=user.id,
@@ -231,7 +231,7 @@ async def create_bot_upload(
         raise HTTPException(status_code=400, detail="حجم الملف كبير جداً")
 
     base_slug = _slugify(name)
-    slug = await _unique_slug(session, base_slug, user.id)
+    slug = await _unique_slug(session, base_slug)
     work_dir = BOTS_DIR / str(user.id)
 
     ext = Path(file.filename).suffix.lower()
