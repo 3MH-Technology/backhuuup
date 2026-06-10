@@ -199,12 +199,20 @@ with open(_user, "rb") as _f:
             entry = work_dir / "bot.py"
             if not entry.exists():
                 py_files = [f for f in work_dir.glob("*.py") if f.name != "_wolf_boot.py"]
+                if not py_files:
+                    slug_dir = work_dir / slug
+                    if slug_dir.exists():
+                        py_files = [f for f in slug_dir.glob("*.py") if f.name != "_wolf_boot.py"]
                 entry = py_files[0] if py_files else entry
             cmd = [python_exe, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
         else:
             entry = work_dir / "index.php"
             if not entry.exists():
                 php_files = list(work_dir.glob("*.php"))
+                if not php_files:
+                    slug_dir = work_dir / slug
+                    if slug_dir.exists():
+                        php_files = list(slug_dir.glob("*.php"))
                 entry = php_files[0] if php_files else entry
             cmd = ["php", "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
 
