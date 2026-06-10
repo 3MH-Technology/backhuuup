@@ -24,7 +24,7 @@ def _clean_db_url(url: str) -> str:
 _db_url = _clean_db_url(settings.database_url)
 _ssl_required = "sslmode=require" in settings.database_url.lower()
 
-_connect_args = {"timeout": 30, "command_timeout": 30}
+_connect_args = {"timeout": 30, "command_timeout": 30, "statement_cache_size": 0}
 if _ssl_required:
     import ssl
     _connect_args["ssl"] = ssl.create_default_context()
