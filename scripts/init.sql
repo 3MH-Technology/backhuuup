@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS bots (
     upload_path     VARCHAR(512),
     webhook_url     VARCHAR(512),
     webhook_active  BOOLEAN      DEFAULT FALSE,
-    webhook_token   VARCHAR(256),
+    webhook_token   TEXT,
     webhook_token_hash VARCHAR(64),
     restart_count   INTEGER      DEFAULT 0,
     expires_at      TIMESTAMPTZ,

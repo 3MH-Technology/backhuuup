@@ -60,7 +60,6 @@ async def _add_missing_columns(conn):
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_date VARCHAR(20)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_attempts_today INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_cooldown_until TIMESTAMP WITH TIME ZONE",
-        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token VARCHAR(256)",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
@@ -69,8 +68,10 @@ async def _add_missing_columns(conn):
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_ip VARCHAR(45)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE",
-        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token_hash VARCHAR(64)",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS slug VARCHAR(255)",
+        "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token TEXT",
+        "ALTER TABLE bots ALTER COLUMN webhook_token TYPE TEXT",
+        "UPDATE bots SET webhook_token = NULL, webhook_active = FALSE, webhook_url = NULL WHERE webhook_token IS NOT NULL AND webhook_token !~ '^gAAAA'",
     ]
     for stmt in migrations:
         try:

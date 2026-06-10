@@ -25,7 +25,7 @@ class Bot(Base):
 
     webhook_url = Column(String(512), nullable=True)
     webhook_active = Column(Boolean, default=False)
-    webhook_token = Column(String(256), nullable=True)       # Fernet-encrypted (for display)
+    webhook_token = Column(Text, nullable=True)       # Fernet-encrypted (for display)
     webhook_token_hash = Column(String(64), nullable=True, index=True)  # SHA-256 hash (for SQL lookups)
 
     restart_count = Column(Integer, default=0)

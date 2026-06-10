@@ -197,6 +197,14 @@ with open(_user, "rb") as _f:
         port = await cls._allocate_port()
 
         try:
+            if bot_type == "php":
+                _php_check = await asyncio.create_subprocess_exec(
+                    "php", "-v", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                rc = await _php_check.wait()
+                if rc != 0:
+                    raise RuntimeError("PHP binary not found or not executable")
+
             if bot_type == "python":
                 # ── isolated venv per bot ──
                 venv_path = work_dir / "venv"
@@ -281,6 +289,24 @@ with open(_user, "rb") as _f:
                 "port": port,
             }
             cls._resource_cache[name] = {"cpu": 0.0, "memory_mb": 0.0}
+
+            # Brief sleep to catch immediate startup failures (e.g. missing binary)
+            await asyncio.sleep(0.5)
+            if process.returncode is not None:
+                if log_fh:
+                    log_fh.flush()
+                stderr_snippet = ""
+                try:
+                    stderr_snippet = log_file.read_text(encoding="utf-8", errors="replace")[-500:]
+                except Exception:
+                    pass
+                msg = f"Bot {name} exited immediately (code {process.returncode}): {stderr_snippet}"
+                logger.error(msg)
+                cls._release_port(port)
+                cls._instances.pop(name, None)
+                if log_fh:
+                    log_fh.close()
+                return {"status": "error", "message": msg}
 
             logger.info(f"Bot {name} started (PID {process.pid}, port {port})")
             return {
