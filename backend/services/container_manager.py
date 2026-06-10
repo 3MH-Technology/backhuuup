@@ -107,12 +107,12 @@ class ContainerManager:
         ini_path.write_text(
             f"; Wolf Host — per-bot PHP config (user={user_id}, bot={bot_id})\n"
             f"open_basedir = {basedir}:/tmp/\n"
-            f"disable_functions = exec,system,shell_exec,passthru,popen,proc_open,proc_nice,proc_terminate,proc_close,pcntl_exec,pcntl_fork,pcntl_signal,pcntl_alarm,pcntl_wait,show_source,highlight_file,curl_multi_exec,mail,mb_send_mail\n"
+            f"disable_functions = exec,system,shell_exec,passthru,popen,proc_open,proc_nice,proc_terminate,proc_close,pcntl_exec,pcntl_fork,pcntl_signal,pcntl_alarm,pcntl_wait,show_source,highlight_file,curl_multi_exec,mail,mb_send_mail,shmop_open,shmop_read,shmop_write,shmop_close,shmop_delete,shm_attach,shm_detach,shm_remove,shm_get_var,shm_has_var,shm_put_var,shm_remove_var,sem_acquire,sem_get,sem_release,sem_remove,msg_get_queue,msg_receive,msg_remove_queue,msg_send,msg_set_queue,msg_stat_queue\n"
             f"allow_url_fopen = Off\n"
             f"allow_url_include = Off\n"
             f"max_execution_time = 30\n"
             f"max_input_time = 30\n"
-            f"memory_limit = 64M\n"
+            f"memory_limit = 32M\n"
             f"post_max_size = 8M\n"
             f"upload_max_filesize = 8M\n"
             f"enable_dl = Off\n"
@@ -120,7 +120,9 @@ class ContainerManager:
             f"display_errors = Off\n"
             f"display_startup_errors = Off\n"
             f"log_errors = On\n"
-            f"expose_php = Off\n",
+            f"expose_php = Off\n"
+            f"opcache.enable = 0\n"
+            f"opcache.enable_cli = 0\n",
             encoding="utf-8",
         )
         return ini_path
