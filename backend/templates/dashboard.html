@@ -7,221 +7,251 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-  <script>
-(function(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)})})();
-</script>
+  <script>(function(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)})})();</script>
   <style>
     * { font-family: 'Tajawal', system-ui, sans-serif; }
-    .bg-app { background: linear-gradient(135deg, #0a0f1e 0%, #111827 50%, #0a0f1e 100%); }
-    .card { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; transition: all .2s; }
-    .card:hover { border-color: rgba(255,255,255,0.12); }
-    .btn-python { background: linear-gradient(135deg, #2563eb, #7c3aed); }
-    .btn-python:hover { box-shadow: 0 8px 25px -5px rgba(37,99,235,0.4); transform: translateY(-1px); }
-    .btn-php { background: linear-gradient(135deg, #7c3aed, #a855f7); }
-    .btn-php:hover { box-shadow: 0 8px 25px -5px rgba(124,58,237,0.4); transform: translateY(-1px); }
+    .bg-app { background: #0b0d14; }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; transition: all .2s; }
+    .card-hover:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-1px); }
+    .btn-icon { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: all .15s; }
+    .btn-icon:hover { transform: translateY(-1px); }
+    .btn-python { background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; }
+    .btn-python:hover { box-shadow: 0 4px 20px rgba(37,99,235,0.35); }
+    .btn-php { background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; }
+    .btn-php:hover { box-shadow: 0 4px 20px rgba(124,58,237,0.35); }
+    .btn-outline { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; }
+    .btn-outline:hover { background: rgba(255,255,255,0.08); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .status-dot.running { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
     .status-dot.stopped { background: #6b7280; }
     .status-dot.crashed { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
-    .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; }
+    .nav-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; transition: all .15s; cursor: pointer; white-space: nowrap; }
+    .nav-btn.active { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .nav-btn:not(.active) { color: #6b7280; }
+    .nav-btn:not(.active):hover { color: #d1d5db; background: rgba(255,255,255,0.03); }
     .code-area { font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; direction: ltr; text-align: left; }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .slide-up { animation: slideUp .3s ease; }
+    .slide-up { animation: slideUp .25s ease; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .glow-text { text-shadow: 0 0 40px rgba(59,130,246,0.3); }
+    .upload-zone { border: 2px dashed rgba(255,255,255,0.08); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: all .2s; }
+    .upload-zone:hover { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.03); }
   </style>
 </head>
 <body class="bg-app text-gray-100 min-h-screen">
-
   <!-- Top Bar -->
-  <header class="bg-black/30 border-b border-gray-800/50">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+  <header class="bg-black/40 border-b border-gray-800/30">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <img src="/static/logo.jpg" alt="Wolf Host" class="w-10 h-10 rounded-xl object-cover border border-gray-700/50">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black text-sm">W</div>
         <div>
-          <h1 class="text-lg font-black text-white glow-text">Wolf Host</h1>
-          <p class="text-xs text-gray-500">استضافة الذب هوست</p>
+          <h1 class="text-base font-black text-white glow-text">Wolf Host</h1>
+          <p class="text-[10px] text-gray-600">استضافة الذب هوست</p>
         </div>
       </div>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-3">
         <span id="usernameDisplay" class="text-sm text-gray-400 hidden md:inline"></span>
         <button onclick="logout()" class="text-sm text-gray-500 hover:text-red-400 transition">خروج</button>
       </div>
     </div>
   </header>
 
-  <div class="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-
-    <!-- Main Navigation Tabs -->
-    <div class="flex gap-2 border-b border-gray-800/50 pb-2 overflow-x-auto">
-      <button onclick="showSection('bots')" id="navBots" class="px-5 py-2 rounded-xl bg-blue-600/20 text-blue-400 font-medium text-sm whitespace-nowrap">بوتاتي</button>
-      <button onclick="showSection('create-python')" id="navPython" class="px-5 py-2 rounded-xl text-gray-400 hover:bg-white/5 text-sm whitespace-nowrap">بوت بايثون جديد</button>
-      <button onclick="showSection('create-php')" id="navPhp" class="px-5 py-2 rounded-xl text-gray-400 hover:bg-white/5 text-sm whitespace-nowrap">بوت PHP جديد</button>
-      <a href="/ai" class="px-5 py-2 rounded-xl text-gray-400 hover:bg-white/5 text-sm whitespace-nowrap inline-block">🤖 المساعد الذكي</a>
+  <div class="max-w-7xl mx-auto p-4 md:p-6">
+    <!-- Navigation -->
+    <div class="flex gap-1.5 mb-6 overflow-x-auto pb-1">
+      <div onclick="showSection('bots')" id="navBots" class="nav-btn active">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        بوتاتي
+      </div>
+      <div onclick="showSection('create-python')" id="navPython" class="nav-btn">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        بوت بايثون جديد
+      </div>
+      <div onclick="showSection('create-php')" id="navPhp" class="nav-btn">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        بوت PHP جديد
+      </div>
+      <a href="/ai" class="nav-btn">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        المساعد الذكي
+      </a>
     </div>
 
-    <!-- Section: Bots List -->
-    <section id="section-bots" class="space-y-4">
+    <!-- Section: Bots -->
+    <section id="section-bots" class="space-y-5">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-2xl font-bold text-white">بوتاتي</h2>
+          <h2 class="text-xl font-bold text-white">بوتاتي</h2>
           <p class="text-gray-500 text-sm">جميع البوتات المستضافة — اضغط على أي بوت للتحكم به</p>
         </div>
         <div class="flex gap-2">
-          <button onclick="showSection('create-python')" class="btn-python px-4 py-2 rounded-xl text-white text-sm font-medium">+ بايثون</button>
-          <button onclick="showSection('create-php')" class="btn-php px-4 py-2 rounded-xl text-white text-sm font-medium">+ PHP</button>
+          <button onclick="showSection('create-python')" class="btn-icon btn-python">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+            بايثون
+          </button>
+          <button onclick="showSection('create-php')" class="btn-icon btn-php">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+            PHP
+          </button>
         </div>
       </div>
 
       <div id="botsGrid" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div id="noBotsMsg" class="col-span-full card p-12 text-center hidden">
-          <img src="/static/logo.jpg" class="w-20 h-20 mx-auto rounded-2xl mb-4 opacity-50">
-          <h3 class="text-xl font-bold text-gray-400 mb-2">لا يوجد بوتات بعد</h3>
-          <p class="text-gray-600 mb-6">أنشئ أول بوت لك الآن وابدأ في نشر خدماتك 🚀</p>
+        <div id="noBotsMsg" class="col-span-full card p-12 text-center hidden slide-up">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-600/10 border border-blue-500/20 flex items-center justify-center mb-4">
+            <span class="text-3xl">🐺</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-400 mb-2">لا يوجد بوتات بعد</h3>
+          <p class="text-gray-600 text-sm mb-6">أنشئ أول بوت لك الآن وابدأ في نشر خدماتك 🚀</p>
           <div class="flex gap-3 justify-center">
-            <button onclick="showSection('create-python')" class="btn-python px-6 py-3 rounded-xl text-white font-medium">بوت بايثون</button>
-            <button onclick="showSection('create-php')" class="btn-php px-6 py-3 rounded-xl text-white font-medium">بوت PHP</button>
+            <button onclick="showSection('create-python')" class="btn-icon btn-python">+ بوت بايثون</button>
+            <button onclick="showSection('create-php')" class="btn-icon btn-php">+ بوت PHP</button>
           </div>
         </div>
       </div>
 
-      <!-- Promo Card -->
-      <div class="card p-4 flex items-center gap-3">
-        <img src="/static/logo.jpg" class="w-10 h-10 rounded-xl object-cover">
-        <div class="text-xs text-gray-400 flex-1">
-          <strong class="text-white">Wolf Host</strong> — دعم المطورين العرب. كل بوت <strong class="text-emerald-400">128MB RAM</strong>.
+      <!-- Footer promo -->
+      <div class="card p-4 flex items-center gap-3 slide-up">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center text-sm">🐺</div>
+        <div class="text-xs text-gray-500 flex-1">
+          <strong class="text-white">Wolf Host</strong> — دعم المطورين العرب. كل بوت <strong class="text-emerald-400">128MB RAM</strong>. استضافة آمنة ومجانية.
         </div>
-        <div class="hidden md:flex gap-2 text-xs">
-          <a href="https://t.me/j49_c" target="_blank" class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition">@j49_c</a>
-          <a href="https://t.me/Wolfhost_1" target="_blank" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition">@Wolfhost_1</a>
-          <a href="https://x.com/wolfhost_1" target="_blank" class="px-3 py-1.5 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700 transition">@wolfhost_1</a>
+        <div class="hidden md:flex gap-1.5">
+          <a href="https://t.me/j49_c" target="_blank" class="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs transition">@j49_c</a>
+          <a href="https://t.me/Wolfhost_1" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs transition">@Wolfhost_1</a>
+          <a href="https://x.com/wolfhost_1" target="_blank" class="px-2.5 py-1 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700 text-xs transition">@wolfhost_1</a>
         </div>
       </div>
     </section>
 
-    <!-- Section: Create Python Bot -->
+    <!-- Section: Create Python -->
     <section id="section-create-python" class="hidden space-y-4">
-      <button onclick="showSection('bots')" class="text-gray-400 hover:text-white text-sm flex items-center gap-1">
+      <button onclick="showSection('bots')" class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition">
         <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        العودة
+        العودة للوحة التحكم
       </button>
-      <h2 class="text-2xl font-bold text-white">بوت بايثون جديد</h2>
-      <p class="text-gray-500 text-sm">ارفع كود بايثون أو ملف مضغوط — مناسب لبوتات التيليجرام والسكربتات</p>
-
-      <!-- Code / Upload Tabs for Python -->
-      <div class="flex gap-2 mb-2">
-        <button onclick="switchCreateMode('python', 'code')" id="pythonModeCode" class="tab-active px-4 py-2 text-sm font-medium rounded-xl">كتابة كود</button>
-        <button onclick="switchCreateMode('python', 'upload')" id="pythonModeUpload" class="px-4 py-2 text-sm font-medium text-gray-500 rounded-xl hover:bg-white/5">رفع ملف</button>
+      <div>
+        <h2 class="text-xl font-bold text-white">بوت بايثون جديد</h2>
+        <p class="text-gray-500 text-sm">ارفع كود بايثون أو ملف مضغوط — مناسب لبوتات التيليجرام والسكربتات</p>
       </div>
-
-      <div class="card p-6">
-        <!-- Python: Write Code -->
+      <div class="flex gap-2 mb-1">
+        <button onclick="switchCreateMode('python', 'code')" id="pythonModeCode" class="nav-btn active">كتابة كود</button>
+        <button onclick="switchCreateMode('python', 'upload')" id="pythonModeUpload" class="nav-btn">رفع ملف</button>
+      </div>
+      <div class="card p-5">
         <div id="pythonCreateCode">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
-              <input type="text" id="pyName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none" placeholder="my-telegram-bot">
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">اسم البوت</label>
+              <input type="text" id="pyName" maxlength="100" class="w-full px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none" placeholder="my-telegram-bot">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">الكود</label>
-              <textarea id="pyCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="# كود البوت هنا...&#10;import telebot&#10;bot = telebot.TeleBot('TOKEN')&#10;@bot.message_handler(commands=['start'])&#10;def start(msg):&#10;    bot.reply_to(msg, 'مرحباً!')&#10;bot.polling()"></textarea>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">الكود</label>
+              <textarea id="pyCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-black/50 border border-gray-700/30 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="# كود البوت هنا..."></textarea>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">المتطلبات (requirements.txt)</label>
-              <textarea id="pyReqs" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="ضع متطلبات بوتك هنا (مثل requirements.txt)&#10;كل مكتبة في سطر"></textarea>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">المتطلبات</label>
+              <textarea id="pyReqs" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-black/50 border border-gray-700/30 rounded-xl text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y" placeholder="requests&#10;pyTelegramBotAPI"></textarea>
             </div>
             <div id="pyCodeError" class="text-red-400 text-sm hidden"></div>
-            <button onclick="createPythonCode()" class="btn-python w-full py-3 rounded-xl text-white font-bold">انشر البوت 🚀</button>
+            <button onclick="createPythonCode()" class="btn-icon btn-python w-full justify-center py-3">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              انشر البوت
+            </button>
           </div>
         </div>
-
-        <!-- Python: Upload File -->
         <div id="pythonCreateUpload" class="hidden">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
-              <input type="text" id="pyUploadName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none" placeholder="my-bot">
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">اسم البوت</label>
+              <input type="text" id="pyUploadName" maxlength="100" class="w-full px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none" placeholder="my-bot">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">رفع ملف</label>
-              <div class="relative border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-blue-500/50 transition cursor-pointer">
-                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                <p class="text-gray-400 text-sm">اضغط لرفع ملف <strong class="text-blue-400">.py</strong> أو <strong class="text-purple-400">.zip</strong></p>
-                <p class="text-gray-600 text-xs mt-1">الحد الأقصى: 5MB</p>
-                <input type="file" id="pyFileInput" accept=".py,.zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect('py')">
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">رفع ملف</label>
+              <div class="upload-zone" onclick="document.getElementById('pyFileInput').click()">
+                <svg class="w-10 h-10 mx-auto text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-gray-400 text-sm">اضغط لرفع <strong class="text-blue-400">.py</strong> أو <strong class="text-purple-400">.zip</strong></p>
+                <p class="text-gray-600 text-xs mt-0.5">الحد الأقصى: 5MB</p>
+                <input type="file" id="pyFileInput" accept=".py,.zip" class="hidden" onchange="handleFileSelect('py')">
               </div>
               <div id="pyFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
             </div>
             <div id="pyUploadError" class="text-red-400 text-sm hidden"></div>
-            <button onclick="createPythonUpload()" class="btn-python w-full py-3 rounded-xl text-white font-bold">رفع ونشر 🚀</button>
+            <button onclick="createPythonUpload()" class="btn-icon btn-python w-full justify-center py-3">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              رفع ونشر
+            </button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Section: Create PHP Bot -->
+    <!-- Section: Create PHP -->
     <section id="section-create-php" class="hidden space-y-4">
-      <button onclick="showSection('bots')" class="text-gray-400 hover:text-white text-sm flex items-center gap-1">
+      <button onclick="showSection('bots')" class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition">
         <svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        العودة
+        العودة للوحة التحكم
       </button>
-      <h2 class="text-2xl font-bold text-white">بوت PHP جديد</h2>
-      <p class="text-gray-500 text-sm">ارفع سكربت PHP أو ملف مضغوط — بدون متطلبات، ارفع وشغل فوراً</p>
-
-      <!-- Code / Upload Tabs for PHP -->
-      <div class="flex gap-2 mb-2">
-        <button onclick="switchCreateMode('php', 'code')" id="phpModeCode" class="tab-active px-4 py-2 text-sm font-medium rounded-xl">كتابة كود</button>
-        <button onclick="switchCreateMode('php', 'upload')" id="phpModeUpload" class="px-4 py-2 text-sm font-medium text-gray-500 rounded-xl hover:bg-white/5">رفع ملف</button>
+      <div>
+        <h2 class="text-xl font-bold text-white">بوت PHP جديد</h2>
+        <p class="text-gray-500 text-sm">ارفع سكربت PHP أو ملف مضغوط — بدون متطلبات، ارفع وشغل فوراً</p>
       </div>
-
-      <div class="card p-6">
-        <!-- PHP: Write Code -->
+      <div class="flex gap-2 mb-1">
+        <button onclick="switchCreateMode('php', 'code')" id="phpModeCode" class="nav-btn active">كتابة كود</button>
+        <button onclick="switchCreateMode('php', 'upload')" id="phpModeUpload" class="nav-btn">رفع ملف</button>
+      </div>
+      <div class="card p-5">
         <div id="phpCreateCode">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
-              <input type="text" id="phpName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none" placeholder="my-webhook">
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">اسم البوت</label>
+              <input type="text" id="phpName" maxlength="100" class="w-full px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none" placeholder="my-webhook">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">الكود</label>
-              <textarea id="phpCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-yellow-300 placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-y" placeholder="<?php&#10;echo 'مرحباً من Wolf Host!';&#10;$update = json_decode(file_get_contents('php://input'), true);&#10;// معالجة الطلب"></textarea>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">الكود</label>
+              <textarea id="phpCode" rows="12" spellcheck="false" class="code-area w-full px-4 py-3 bg-black/50 border border-gray-700/30 rounded-xl text-yellow-300 placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-y" placeholder="&lt;?php&#10;echo 'Hello Wolf Host!';"></textarea>
             </div>
             <div id="phpCodeError" class="text-red-400 text-sm hidden"></div>
-            <button onclick="createPhpCode()" class="btn-php w-full py-3 rounded-xl text-white font-bold">انشر البوت 🚀</button>
+            <button onclick="createPhpCode()" class="btn-icon btn-php w-full justify-center py-3">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              انشر البوت
+            </button>
           </div>
         </div>
-
-        <!-- PHP: Upload File -->
         <div id="phpCreateUpload" class="hidden">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">اسم البوت</label>
-              <input type="text" id="phpUploadName" maxlength="100" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none" placeholder="my-bot">
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">اسم البوت</label>
+              <input type="text" id="phpUploadName" maxlength="100" class="w-full px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none" placeholder="my-bot">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">رفع ملف</label>
-              <div class="relative border-2 border-dashed border-gray-700/50 rounded-xl p-8 text-center hover:border-purple-500/50 transition cursor-pointer">
-                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                <p class="text-gray-400 text-sm">اضغط لرفع ملف <strong class="text-purple-400">.php</strong> أو <strong class="text-yellow-400">.zip</strong></p>
-                <p class="text-gray-600 text-xs mt-1">الحد الأقصى: 5MB</p>
-                <input type="file" id="phpFileInput" accept=".php,.zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect('php')">
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">رفع ملف</label>
+              <div class="upload-zone" onclick="document.getElementById('phpFileInput').click()">
+                <svg class="w-10 h-10 mx-auto text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-gray-400 text-sm">اضغط لرفع <strong class="text-purple-400">.php</strong> أو <strong class="text-yellow-400">.zip</strong></p>
+                <p class="text-gray-600 text-xs mt-0.5">الحد الأقصى: 5MB</p>
+                <input type="file" id="phpFileInput" accept=".php,.zip" class="hidden" onchange="handleFileSelect('php')">
               </div>
               <div id="phpFileName" class="mt-2 text-sm text-emerald-400 hidden"></div>
             </div>
             <div id="phpUploadError" class="text-red-400 text-sm hidden"></div>
-            <button onclick="createPhpUpload()" class="btn-php w-full py-3 rounded-xl text-white font-bold">رفع ونشر 🚀</button>
+            <button onclick="createPhpUpload()" class="btn-icon btn-php w-full justify-center py-3">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              رفع ونشر
+            </button>
           </div>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- Captcha Modal for Renew -->
+  <!-- Captcha Modal -->
   <div id="captchaModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden" onclick="if(event.target===this)closeCaptcha()">
     <div class="bg-gray-900 border border-gray-700/50 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl" onclick="event.stopPropagation()">
-      <h3 class="text-lg font-bold text-white mb-2 text-center">🤖 تجديد البوت</h3>
+      <div class="w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-lg mb-3">⟳</div>
+      <h3 class="text-lg font-bold text-white mb-1 text-center">تجديد البوت</h3>
       <p class="text-gray-400 text-sm text-center mb-4">حل الكابتشا لتجديد البوت لمدة 4 أيام</p>
-      <div id="captchaQuestion" class="text-center text-2xl font-bold text-blue-400 mb-4 bg-gray-800/50 rounded-xl py-4"></div>
-      <input type="number" id="captchaAnswer" class="w-full px-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-xl text-white text-center text-lg focus:border-blue-500 focus:outline-none mb-3" placeholder="أدخل الإجابة" onkeydown="if(event.key==='Enter')submitCaptcha()">
+      <div id="captchaQuestion" class="text-center text-2xl font-bold text-blue-400 mb-4 bg-black/50 rounded-xl py-4"></div>
+      <input type="number" id="captchaAnswer" class="w-full px-4 py-3 bg-black/50 border border-gray-700/30 rounded-xl text-white text-center text-lg focus:border-blue-500 focus:outline-none mb-3" placeholder="أدخل الإجابة" onkeydown="if(event.key==='Enter')submitCaptcha()">
       <div id="captchaError" class="text-red-400 text-sm text-center hidden mb-3"></div>
       <button onclick="submitCaptcha()" class="w-full py-3 bg-gradient-to-l from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl transition">تأكيد التجديد</button>
       <button onclick="closeCaptcha()" class="w-full py-2 text-gray-500 hover:text-gray-300 text-sm mt-2 transition">إلغاء</button>
@@ -241,16 +271,17 @@
 
     function showSection(section) {
       document.querySelectorAll('[id^="section-"]').forEach(s => s.classList.add('hidden'));
-      document.querySelectorAll('[id^="nav"]').forEach(n => { n.classList.remove('bg-blue-600/20', 'text-blue-400'); n.classList.add('text-gray-400'); });
+      document.querySelectorAll('.nav-btn').forEach(n => { n.classList.remove('active'); });
       document.getElementById(`section-${section}`).classList.remove('hidden');
       const navMap = { bots: 'navBots', 'create-python': 'navPython', 'create-php': 'navPhp' };
-      if (navMap[section]) { const el = document.getElementById(navMap[section]); el.classList.add('bg-blue-600/20', 'text-blue-400'); el.classList.remove('text-gray-400'); }
+      if (navMap[section]) { document.getElementById(navMap[section]).classList.add('active'); }
       if (section === 'bots') loadBots();
     }
 
     function switchCreateMode(type, mode) {
       ['code', 'upload'].forEach(m => {
-        document.getElementById(`${type}Mode${m.charAt(0).toUpperCase() + m.slice(1)}`).className = `px-4 py-2 text-sm font-medium rounded-xl ${m === mode ? 'tab-active' : 'text-gray-500 hover:bg-white/5'}`;
+        const btn = document.getElementById(`${type}Mode${m.charAt(0).toUpperCase() + m.slice(1)}`);
+        btn.className = `nav-btn ${m === mode ? 'active' : ''}`;
         document.getElementById(`${type}Create${m.charAt(0).toUpperCase() + m.slice(1)}`).classList.toggle('hidden', m !== mode);
       });
     }
@@ -301,9 +332,7 @@
       if (!name) { errEl.textContent = 'أدخل اسم البوت'; errEl.classList.remove('hidden'); return; }
       if (!file) { errEl.textContent = 'اختر ملف للرفع'; errEl.classList.remove('hidden'); return; }
       const formData = new FormData();
-      formData.append('name', name);
-      formData.append('bot_type', 'python');
-      formData.append('file', file);
+      formData.append('name', name); formData.append('bot_type', 'python'); formData.append('file', file);
       try {
         const res = await fetch(`${API}/api/bots/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
         if (res.ok) { document.getElementById('pyUploadName').value = ''; selectedFile['py'] = null; document.getElementById('pyFileName').classList.add('hidden'); showSection('bots'); }
@@ -319,9 +348,7 @@
       if (!name) { errEl.textContent = 'أدخل اسم البوت'; errEl.classList.remove('hidden'); return; }
       if (!file) { errEl.textContent = 'اختر ملف للرفع'; errEl.classList.remove('hidden'); return; }
       const formData = new FormData();
-      formData.append('name', name);
-      formData.append('bot_type', 'php');
-      formData.append('file', file);
+      formData.append('name', name); formData.append('bot_type', 'php'); formData.append('file', file);
       try {
         const res = await fetch(`${API}/api/bots/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
         if (res.ok) { document.getElementById('phpUploadName').value = ''; selectedFile['php'] = null; document.getElementById('phpFileName').classList.add('hidden'); showSection('bots'); }
@@ -343,38 +370,39 @@
         bots.forEach(bot => {
           const c = document.createElement('a');
           c.href = `/bot/${bot.id}`;
-          const colors = { running: 'border-emerald-500/30 bg-emerald-500/5', stopped: 'border-gray-700/50 bg-gray-800/30', crashed: 'border-red-500/30 bg-red-500/5' };
-          c.className = `bot-card card p-5 block border ${colors[bot.status] || colors.stopped} slide-up`;
+          const borderColors = { running: 'border-emerald-500/25', stopped: 'border-gray-700/40', crashed: 'border-red-500/25' };
+          c.className = `bot-card card card-hover p-4 block border ${borderColors[bot.status] || borderColors.stopped} slide-up`;
           const expired = bot.expired;
           const expiresDate = bot.expires_at ? new Date(bot.expires_at) : null;
           const daysLeft = expiresDate ? Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24)) : 4;
           c.innerHTML = `
             <div class="flex items-start justify-between mb-3">
-              <div class="w-10 h-10 rounded-xl ${bot.bot_type === 'python' ? 'bg-blue-500/10' : 'bg-purple-500/10'} flex items-center justify-center">
-                <span class="text-lg ${bot.bot_type === 'python' ? 'text-blue-400' : 'text-purple-400'} font-bold">${bot.bot_type === 'python' ? 'Py' : 'PHP'}</span>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl ${bot.bot_type === 'python' ? 'bg-blue-500/10' : 'bg-purple-500/10'} flex items-center justify-center text-lg">
+                  ${bot.bot_type === 'python' ? '<span class="text-blue-400 font-bold">Py</span>' : '<span class="text-purple-400 font-bold">PHP</span>'}
+                </div>
+                <div>
+                  <h3 class="font-bold text-white text-sm">${escapeHtml(bot.name)}</h3>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="status-dot ${bot.status}"></span>
+                    <span class="text-xs ${bot.status === 'running' ? 'text-emerald-400' : bot.status === 'crashed' ? 'text-red-400' : 'text-gray-500'}">${bot.status === 'running' ? 'يعمل' : bot.status === 'crashed' ? 'معطل' : 'متوقف'}</span>
+                  </div>
+                </div>
               </div>
-              <span class="status-dot ${bot.status}"></span>
+              ${bot.webhook_active ? '<span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-medium">Webhook</span>' : ''}
             </div>
-            <h3 class="font-bold text-white mb-1">${escapeHtml(bot.name)}</h3>
-            <div class="flex flex-wrap items-center gap-2 text-xs">
-              <span class="${bot.status === 'running' ? 'text-emerald-400' : bot.status === 'crashed' ? 'text-red-400' : 'text-gray-500'}">${bot.status === 'running' ? 'يعمل' : bot.status === 'crashed' ? 'معطل' : 'متوقف'}</span>
-              ${bot.webhook_active ? '<span class="text-blue-400">Webhook</span>' : ''}
-              <span class="text-gray-600">·</span>
-              <span class="text-gray-600">${new Date(bot.created_at).toLocaleDateString('ar-SA')}</span>
+            <div class="flex items-center justify-between text-xs text-gray-600">
+              <span>${new Date(bot.created_at).toLocaleDateString('ar-SA')}</span>
+              <span class="${expired ? 'text-red-400' : daysLeft <= 1 ? 'text-yellow-400' : 'text-gray-500'}">${expired ? 'منتهي' : daysLeft + ' أيام'}</span>
             </div>
-            <div class="mt-2 flex items-center justify-between text-xs">
-              <span class="${expired ? 'text-red-400' : daysLeft <= 1 ? 'text-yellow-400' : 'text-gray-500'}">${expired ? 'منتهي' : daysLeft + ' أيام متبقية'}</span>
-              ${bot.bot_type === 'python' ? '<span class="text-blue-400">Python</span>' : '<span class="text-purple-400">PHP</span>'}
-            </div>
-            ${expired ? `<button onclick="event.preventDefault(); event.stopPropagation(); showRenewCaptcha(${bot.id})" class="mt-3 w-full py-1.5 bg-gradient-to-l from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-xs font-bold rounded-lg transition">تجديد الاشتراك</button>` : ''}
+            ${expired ? `<button onclick="event.preventDefault(); event.stopPropagation(); showRenewCaptcha(${bot.id})" class="mt-3 w-full py-2 bg-gradient-to-l from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-xs font-bold rounded-lg transition">تجديد الاشتراك</button>` : ''}
           `;
           grid.appendChild(c);
         });
       } catch (e) { console.error(e); }
     }
 
-    let renewBotId = null;
-    let currentCaptchaId = null;
+    let renewBotId = null; let currentCaptchaId = null;
 
     async function showRenewCaptcha(botId) {
       renewBotId = botId;
@@ -398,10 +426,7 @@
       errEl.classList.add('hidden');
       if (!answer) { errEl.textContent = 'أدخل الإجابة'; errEl.classList.remove('hidden'); return; }
       try {
-        const res = await fetch(`${API}/api/bots/${renewBotId}/renew`, {
-          method: 'POST', headers: getHeaders(),
-          body: JSON.stringify({ captcha_id: currentCaptchaId, answer }),
-        });
+        const res = await fetch(`${API}/api/bots/${renewBotId}/renew`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ captcha_id: currentCaptchaId, answer }) });
         const data = await res.json();
         if (res.ok) { closeCaptcha(); loadBots(); }
         else { errEl.textContent = data.detail || 'فشل التجديد'; errEl.classList.remove('hidden'); }

@@ -8,170 +8,287 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script>
-(function(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)})})();
-</script>
+  <script>(function(){['contextmenu','keydown','keyup'].forEach(function(e){document.addEventListener(e,function(ev){if(ev.type==='contextmenu'){ev.preventDefault();ev.stopPropagation();return false}if(ev.type==='keydown'||ev.type==='keyup'){if(ev.key==='F12'||(ev.ctrlKey&&ev.shiftKey&&['I','J','C'].includes(ev.key.toUpperCase()))||(ev.ctrlKey&&ev.key==='u')){ev.preventDefault();ev.stopPropagation();return false}}},false)})})();</script>
   <style>
     * { font-family: 'Tajawal', system-ui, sans-serif; }
-    .bg-app { background: linear-gradient(135deg, #0a0f1e 0%, #111827 50%, #0a0f1e 100%); }
-    .card { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; transition: all .2s; }
-    .card:hover { border-color: rgba(255,255,255,0.12); }
-    .btn-primary { background: linear-gradient(135deg, #2563eb, #7c3aed); }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px -5px rgba(37,99,235,0.4); }
-    .btn-danger { background: linear-gradient(135deg, #dc2626, #db2777); }
-    .btn-success { background: linear-gradient(135deg, #059669, #0d9488); }
-    .console { background: #0a0a0f; font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; line-height: 1.6; }
-    .console::-webkit-scrollbar { width: 6px; }
-    .console::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-    .status-dot.running { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
-    .status-dot.stopped { background: #6b7280; }
-    .status-dot.crashed { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
-    .code-area { font-family: 'JetBrains Mono', 'Cairo', monospace; font-size: 13px; direction: ltr; text-align: left; }
-    .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .slide-up { animation: slideUp .3s ease; }
+    .bg-app { background: #0b0d14; }
+    .bg-sidebar { background: #0e1019; border-right: 1px solid rgba(255,255,255,0.04); }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
+    .card-hover:hover { border-color: rgba(255,255,255,0.12); }
+    .console { background: #07070c; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; }
+    .console::-webkit-scrollbar { width: 5px; }
+    .console::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+    .btn-icon { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: all .15s; }
+    .btn-icon:hover { transform: translateY(-1px); }
+    .btn-start { background: #059669; color: white; }
+    .btn-start:hover { box-shadow: 0 4px 15px rgba(5,150,105,0.35); }
+    .btn-stop { background: #dc2626; color: white; }
+    .btn-stop:hover { box-shadow: 0 4px 15px rgba(220,38,38,0.35); }
+    .btn-restart { background: rgba(255,255,255,0.06); color: #d1d5db; border: 1px solid rgba(255,255,255,0.08); }
+    .btn-restart:hover { background: rgba(255,255,255,0.1); }
+    .tab-btn { padding: 10px 20px; font-size: 13px; font-weight: 500; color: #6b7280; border-bottom: 2px solid transparent; transition: all .15s; cursor: pointer; white-space: nowrap; }
+    .tab-btn:hover { color: #d1d5db; }
+    .tab-btn.active { color: #60a5fa; border-bottom-color: #3b82f6; }
+    .stat-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.05); overflow: hidden; }
+    .stat-bar-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .code-area { font-family: 'JetBrains Mono', monospace; font-size: 13px; direction: ltr; text-align: left; }
+    .slide-up { animation: slideUp .25s ease; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body class="bg-app text-gray-100 min-h-screen">
-  <div class="max-w-6xl mx-auto p-4 md:p-6">
+<body class="bg-app text-gray-100 min-h-screen flex">
+  <!-- Sidebar -->
+  <aside class="bg-sidebar w-64 shrink-0 hidden lg:flex flex-col border-l border-gray-800/30">
+    <div class="p-5 border-b border-gray-800/20">
+      <a href="/dashboard" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black text-sm">W</div>
+        <div>
+          <div class="text-base font-bold text-white">Wolf Host</div>
+          <div class="text-[10px] text-gray-500">تحكم البوت</div>
+        </div>
+      </a>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 text-sm transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        لوحة التحكم
+      </a>
+      <a href="/ai" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 text-sm transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        المساعد الذكي
+      </a>
+      <div class="pt-4 pb-1">
+        <div class="text-[10px] uppercase tracking-wider text-gray-600 px-3">التحكم</div>
+      </div>
+      <div data-tab="logs" class="tab-nav flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-400 bg-blue-500/10 text-sm font-medium cursor-pointer transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        السجلات
+      </div>
+      <div data-tab="code" class="tab-nav flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 text-sm cursor-pointer transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        تعديل الكود
+      </div>
+      <div data-tab="webhook" class="tab-nav flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 text-sm cursor-pointer transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        Webhook
+      </div>
+      <div data-tab="settings" class="tab-nav flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 text-sm cursor-pointer transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        الإعدادات
+      </div>
+    </nav>
+    <div class="p-3 border-t border-gray-800/20">
+      <button onclick="deleteBot()" class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 text-sm transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        حذف البوت
+      </button>
+    </div>
+  </aside>
 
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+  <!-- Main -->
+  <main class="flex-1 min-w-0">
+    <!-- Top bar -->
+    <header class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-gray-800/20 lg:hidden">
       <div class="flex items-center gap-3">
-        <a href="/dashboard" class="text-gray-400 hover:text-white transition">
+        <a href="/dashboard" class="text-gray-400 hover:text-white">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
-        <a href="/ai" class="text-gray-400 hover:text-white transition text-sm ml-2" title="المساعد الذكي">🤖</a>
         <div>
-          <h1 id="botName" class="text-2xl font-bold text-white">—</h1>
-          <div class="flex items-center gap-2 mt-1">
-            <span id="statusDot" class="status-dot stopped"></span>
-            <span id="statusText" class="text-sm text-gray-400">جاري التحميل...</span>
-            <span class="text-gray-600 mx-1">·</span>
-            <span id="botType" class="text-sm text-gray-500">—</span>
+          <h1 id="botNameMob" class="text-lg font-bold text-white">—</h1>
+          <span id="statusTextMob" class="text-xs text-gray-500">جاري التحميل...</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-4 md:p-6 max-w-7xl mx-auto">
+      <!-- Bot header -->
+      <div class="flex flex-wrap items-start justify-between gap-4 mb-6 slide-up">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/20 flex items-center justify-center">
+            <span id="botTypeIcon" class="text-2xl">🐍</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 id="botName" class="text-2xl font-black text-white">—</h1>
+              <span id="statusBadge" class="status-badge bg-gray-800 text-gray-400"><span class="w-2 h-2 rounded-full bg-gray-500"></span>جاري التحميل...</span>
+            </div>
+            <div class="flex items-center gap-3 mt-1">
+              <span id="botType" class="text-sm text-gray-500">—</span>
+              <span class="text-gray-700">|</span>
+              <span id="botIdDisplay" class="text-sm text-gray-600 font-mono">ID: —</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="btnStart" onclick="controlBot('start')" class="btn-icon btn-start">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+            تشغيل
+          </button>
+          <button id="btnStop" onclick="controlBot('stop')" class="btn-icon btn-stop">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"/></svg>
+            إيقاف
+          </button>
+          <button id="btnRestart" onclick="controlBot('restart')" class="btn-icon btn-restart">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            إعادة تشغيل
+          </button>
+        </div>
+      </div>
+
+      <!-- Resource stats -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="card p-4 slide-up">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">المعالج (CPU)</span>
+            <span class="text-xs font-bold text-emerald-400" id="cpuDisplay">0%</span>
+          </div>
+          <div class="stat-bar">
+            <div id="cpuBar" class="stat-bar-fill bg-emerald-500" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="card p-4 slide-up" style="animation-delay:0.05s">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">الذاكرة (RAM)</span>
+            <span class="text-xs font-bold text-blue-400" id="ramDisplay">0 MB</span>
+          </div>
+          <div class="stat-bar">
+            <div id="ramBar" class="stat-bar-fill bg-blue-500" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="card p-4 slide-up" style="animation-delay:0.1s">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">إعادة التشغيل</span>
+            <span class="text-xs font-bold text-purple-400" id="restartsDisplay">0</span>
+          </div>
+          <div class="stat-bar">
+            <div id="restartBar" class="stat-bar-fill bg-purple-500" style="width:0%"></div>
           </div>
         </div>
       </div>
-      <div class="flex gap-2">
-        <button id="btnStart" onclick="controlBot('start')" class="btn-success px-4 py-2 rounded-xl text-white text-sm font-medium">تشغيل</button>
-        <button id="btnStop" onclick="controlBot('stop')" class="btn-danger px-4 py-2 rounded-xl text-white text-sm font-medium">إيقاف</button>
-        <button id="btnRestart" onclick="controlBot('restart')" class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition">إعادة تشغيل</button>
 
+      <!-- Tab bar for mobile -->
+      <div class="flex border-b border-gray-800/30 mb-4 overflow-x-auto lg:hidden">
+        <button onclick="switchTab('logs')" class="tab-btn active" id="tabLogs">السجلات</button>
+        <button onclick="switchTab('code')" class="tab-btn" id="tabCode">تعديل الكود</button>
+        <button onclick="switchTab('webhook')" class="tab-btn" id="tabWebhook">Webhook</button>
+        <button onclick="switchTab('settings')" class="tab-btn" id="tabSettings">الإعدادات</button>
+      </div>
+
+      <!-- Panels -->
+      <div class="space-y-4">
+        <!-- Panel: Logs -->
+        <div id="panelLogs">
+          <div class="card overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2.5 bg-black/30">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="text-xs text-gray-500">السجلات المباشرة</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span id="liveIndicator" class="flex items-center gap-1.5 text-xs text-emerald-400">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> مباشر
+                </span>
+                <button onclick="fetchLogsRest()" class="text-xs text-gray-500 hover:text-blue-400 transition">تحديث</button>
+              </div>
+            </div>
+            <div id="logConsole" class="console h-[32rem] overflow-y-auto p-4 text-gray-300 whitespace-pre-wrap break-all">
+              <span class="text-gray-600">// السجلات ستظهر هنا عند تشغيل البوت ...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Code -->
+        <div id="panelCode" class="hidden">
+          <div class="card p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-white">تعديل الكود</h3>
+              <span class="text-xs text-gray-500">أعد تشغيل البوت بعد التعديل</span>
+            </div>
+            <textarea id="editCode" rows="16" spellcheck="false" class="code-area w-full px-4 py-3 bg-black/50 border border-gray-700/30 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y"></textarea>
+            <div id="reqSection">
+              <label class="block text-sm font-medium text-gray-400 mb-2">المتطلبات (requirements.txt)</label>
+              <textarea id="editRequirements" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-black/50 border border-gray-700/30 rounded-xl text-gray-300 focus:border-blue-500 focus:outline-none resize-y"></textarea>
+            </div>
+            <div id="editError" class="text-red-400 text-sm hidden"></div>
+            <button onclick="saveCode()" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-sm font-bold rounded-xl transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              حفظ التغييرات
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel: Webhook -->
+        <div id="panelWebhook" class="hidden">
+          <div class="card p-5 space-y-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-white">Webhook</h3>
+                <p class="text-xs text-gray-500 mt-0.5">استقبل طلبات HTTP مباشرة إلى بوتك</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="webhookToggle" onchange="toggleWebhook()" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div id="webhookUrlSection" class="hidden space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">رابط Webhook (سري — لا تشاركه)</label>
+                <div class="flex gap-2">
+                  <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-yellow-300 text-sm" value="https://wolf-host.pages.dev/api/webhook/">
+                  <button onclick="copyWebhookUrl()" class="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 text-white text-sm font-medium rounded-xl transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    نسخ
+                  </button>
+                </div>
+              </div>
+              <div id="webhookTokenSection" class="hidden">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">توكن التوثيق</label>
+                <input type="text" id="webhookToken" readonly class="code-area w-full px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-emerald-400 text-sm font-mono" value="">
+              </div>
+              <div id="proxyStatusSection" class="hidden p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  <div>
+                    <p class="text-xs text-emerald-400 font-medium">بروكسي كلاودفلير شغال</p>
+                    <p class="text-xs text-gray-500 mt-0.5">المنصة تتصل بتليجرام تلقائياً عبر: <span id="proxyUrlDisplay" class="text-blue-400"></span></p>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-gray-600">الرابط فريد وآمن. لا أحد يقدر يخمنه.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Settings -->
+        <div id="panelSettings" class="hidden">
+          <div class="card p-5">
+            <h3 class="text-base font-bold text-white mb-4">معلومات البوت</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">المعرف:</span><span id="infoId" class="text-gray-300 font-mono"></span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">الاسم:</span><span id="infoName" class="text-gray-300"></span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">Slug:</span><span id="infoSlug" class="text-gray-300 font-mono"></span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">النوع:</span><span id="infoType" class="text-gray-300"></span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">Container:</span><span id="infoContainer" class="text-gray-300 font-mono"></span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">تاريخ الإنشاء:</span><span id="infoCreated" class="text-gray-300"></span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">الصلاحية:</span><span class="text-emerald-400">غير محدود</span></div>
+              <div class="flex items-center gap-2"><span class="text-gray-500 w-24">الحالة:</span><span id="infoExpired" class="text-gray-300"></span></div>
+            </div>
+          </div>
+          <div class="card p-5 mt-4">
+            <h3 class="text-base font-bold text-white mb-3">الترويج 🐺</h3>
+            <p class="text-xs text-gray-500 mb-3">ساهم في نشر المنصة ليستفيد الجميع</p>
+            <div class="flex flex-wrap gap-2">
+              <a href="https://t.me/j49_c" target="_blank" class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs transition">@j49_c</a>
+              <a href="https://t.me/EQJ_1" target="_blank" class="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 text-xs transition">@EQJ_1</a>
+              <a href="https://t.me/Wolfhost_1" target="_blank" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs transition">@Wolfhost_1</a>
+              <a href="https://x.com/wolfhost_1" target="_blank" class="px-3 py-1.5 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700 text-xs transition">@wolfhost_1</a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Resource Stats -->
-    <div class="grid grid-cols-3 gap-4 mb-6">
-      <div class="card p-4 text-center">
-        <div class="text-2xl font-bold text-emerald-400" id="cpuDisplay">0%</div>
-        <div class="text-xs text-gray-500 mt-1">المعالج (CPU)</div>
-      </div>
-      <div class="card p-4 text-center">
-        <div class="text-2xl font-bold text-blue-400" id="ramDisplay">0 MB</div>
-        <div class="text-xs text-gray-500 mt-1">الذاكرة (RAM)</div>
-      </div>
-      <div class="card p-4 text-center">
-        <div class="text-2xl font-bold text-purple-400" id="restartsDisplay">0</div>
-        <div class="text-xs text-gray-500 mt-1">عدد إعادة التشغيل</div>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="card overflow-hidden">
-      <div class="flex border-b border-gray-800/50 overflow-x-auto">
-        <button onclick="switchTab('logs')" id="tabLogs" class="tab-active px-6 py-3 text-sm font-medium whitespace-nowrap">السجلات</button>
-        <button onclick="switchTab('code')" id="tabCode" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">تعديل الكود</button>
-        <button onclick="switchTab('webhook')" id="tabWebhook" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">Webhook</button>
-        <button onclick="switchTab('settings')" id="tabSettings" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 whitespace-nowrap">الإعدادات</button>
-        <button onclick="deleteBot()" class="px-6 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 whitespace-nowrap mr-auto">حذف</button>
-      </div>
-
-      <!-- Tab: Logs -->
-      <div id="panelLogs">
-        <div class="flex items-center justify-between px-4 py-2 bg-gray-900/30">
-          <span class="text-xs text-gray-500">السجلات المباشرة — يتم التحديث تلقائياً</span>
-          <span id="liveIndicator" class="flex items-center gap-1.5 text-xs text-emerald-400">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> مباشر
-          </span>
-          <button onclick="fetchLogsRest()" class="text-xs text-gray-500 hover:text-blue-400 transition">تحديث</button>
-        </div>
-        <div id="logConsole" class="console h-96 overflow-y-auto p-4 text-gray-300 whitespace-pre-wrap break-all">
-          <span class="text-gray-600">// السجلات ستظهر هنا عند تشغيل البوت ...</span>
-        </div>
-      </div>
-
-      <!-- Tab: Code -->
-      <div id="panelCode" class="hidden p-4 space-y-4">
-        <textarea id="editCode" rows="14" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-green-400 placeholder-gray-600 focus:border-blue-500 focus:outline-none resize-y"></textarea>
-        <div id="reqSection">
-          <label class="block text-sm font-medium text-gray-300 mb-2">المتطلبات</label>
-          <textarea id="editRequirements" rows="3" spellcheck="false" class="code-area w-full px-4 py-3 bg-gray-900/80 border border-gray-700/50 rounded-xl text-gray-300 focus:border-blue-500 focus:outline-none resize-y"></textarea>
-        </div>
-        <div id="editError" class="text-red-400 text-sm hidden"></div>
-        <button onclick="saveCode()" class="btn-primary px-6 py-2.5 rounded-xl text-white text-sm font-medium">حفظ</button>
-      </div>
-
-      <!-- Tab: Webhook -->
-      <div id="panelWebhook" class="hidden p-6 space-y-6">
-        <div class="card p-5">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-bold text-white mb-1">Webhook</h3>
-              <p class="text-sm text-gray-400">استقبل طلبات HTTP مباشرة إلى بوتك</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="webhookToggle" onchange="toggleWebhook()" class="sr-only peer">
-              <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-            <div id="webhookUrlSection" class="hidden mt-4">
-            <label class="block text-sm font-medium text-gray-300 mb-2">رابط Webhook (سري — لا تشاركه)</label>
-            <div class="flex gap-2">
-              <input type="text" id="webhookUrl" readonly class="code-area flex-1 px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-yellow-300 text-sm" value="https://wolf-host.pages.dev/api/webhook/">
-              <button onclick="copyWebhookUrl()" class="btn-primary px-4 py-2 rounded-xl text-white text-sm">نسخ</button>
-            </div>
-            <div id="webhookTokenSection" class="hidden mt-3">
-              <label class="block text-sm font-medium text-gray-300 mb-2">توكن التوثيق</label>
-              <input type="text" id="webhookToken" readonly class="code-area w-full px-4 py-2 bg-gray-900/80 border border-gray-700/50 rounded-xl text-emerald-400 text-sm font-mono" value="">
-            </div>
-            <div id="proxyStatusSection" class="hidden mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-              <p class="text-xs text-emerald-400 mb-1">✅ بروكسي كلاودفلير شغال — المنصة تتصل بتليجرام تلقائياً</p>
-              <p class="text-xs text-gray-500">الرابط: <span id="proxyUrlDisplay" class="text-blue-400">https://wolf-proxy.m0570398993.workers.dev</span></p>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">الرابط فريد وآمن. لا أحد يقدر يخمنه.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab: Settings -->
-      <div id="panelSettings" class="hidden p-6 space-y-6">
-        <div class="card p-5">
-          <h3 class="text-lg font-bold text-white mb-4">معلومات البوت</h3>
-          <div class="grid md:grid-cols-2 gap-4 text-sm">
-            <div><span class="text-gray-500">المعرف:</span> <span id="infoId" class="text-gray-300 font-mono"></span></div>
-            <div><span class="text-gray-500">الاسم:</span> <span id="infoName" class="text-gray-300"></span></div>
-            <div><span class="text-gray-500">Slug:</span> <span id="infoSlug" class="text-gray-300 font-mono"></span></div>
-            <div><span class="text-gray-500">النوع:</span> <span id="infoType" class="text-gray-300"></span></div>
-            <div><span class="text-gray-500">Container ID:</span> <span id="infoContainer" class="text-gray-300 font-mono"></span></div>
-            <div><span class="text-gray-500">تاريخ الإنشاء:</span> <span id="infoCreated" class="text-gray-300"></span></div>
-            <div><span class="text-gray-500">الصلاحية:</span> <span class="text-emerald-400">غير محدود</span></div>
-            <div><span class="text-gray-500">الحالة:</span> <span id="infoExpired" class="text-gray-300"></span></div>
-          </div>
-        </div>
-        <div class="card p-5">
-          <h3 class="text-lg font-bold text-white mb-2">الترويج 🐺</h3>
-          <p class="text-sm text-gray-400 mb-4">ساهم في نشر المنصة ليستفيد الجميع</p>
-          <div class="flex flex-wrap gap-3 text-sm">
-            <a href="https://t.me/j49_c" target="_blank" class="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition">@j49_c</a>
-            <a href="https://t.me/EQJ_1" target="_blank" class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition">@EQJ_1</a>
-            <a href="https://t.me/Wolfhost_1" target="_blank" class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition">@Wolfhost_1</a>
-            <a href="https://x.com/wolfhost_1" target="_blank" class="px-4 py-2 rounded-xl bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition">@wolfhost_1</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </main>
 
   <script>
     const API = window.location.origin;
@@ -184,9 +301,7 @@
 
     if (!token) { window.location.href = '/login'; }
 
-    function getHeaders() {
-      return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-    }
+    function getHeaders() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }; }
 
     async function loadBot() {
       try {
@@ -195,7 +310,10 @@
         const bot = await res.json();
 
         document.getElementById('botName').textContent = bot.name;
+        document.getElementById('botNameMob').textContent = bot.name;
         document.getElementById('botType').textContent = bot.bot_type === 'python' ? 'بوت بايثون' : 'سكربت PHP';
+        document.getElementById('botIdDisplay').textContent = `ID: ${bot.id}`;
+        document.getElementById('botTypeIcon').textContent = bot.bot_type === 'python' ? '🐍' : '🐘';
         document.getElementById('editCode').value = bot.main_file || '';
         document.getElementById('editRequirements').value = bot.requirements || '';
         document.getElementById('webhookToggle').checked = bot.webhook_active || false;
@@ -221,10 +339,8 @@
         }
 
         updateStatus(bot.status, bot.resource_usage);
-
         statusInterval = setInterval(() => refreshStatus(), 3000);
         resourceInterval = setInterval(() => refreshResources(), 5000);
-
         switchTab('logs');
         connectLogs();
       } catch (e) {
@@ -245,21 +361,39 @@
         const res = await fetch(`${API}/api/bots/${botId}`, { headers: getHeaders() });
         const bot = await res.json();
         const usage = bot.resource_usage || {};
-        document.getElementById('cpuDisplay').textContent = (usage.cpu || 0) + '%';
-        document.getElementById('ramDisplay').textContent = (usage.memory_mb || 0) + ' MB';
+        const cpu = usage.cpu || 0;
+        const mem = usage.memory_mb || 0;
+        document.getElementById('cpuDisplay').textContent = cpu + '%';
+        document.getElementById('ramDisplay').textContent = mem + ' MB';
+        document.getElementById('cpuBar').style.width = Math.min(cpu, 100) + '%';
+        document.getElementById('ramBar').style.width = Math.min(mem / 128 * 100, 100) + '%';
         document.getElementById('restartsDisplay').textContent = bot.restart_count || 0;
       } catch (e) {}
     }
 
     function updateStatus(status, usage) {
-      const dot = document.getElementById('statusDot');
+      const badge = document.getElementById('statusBadge');
       const text = document.getElementById('statusText');
-      dot.className = 'status-dot ' + status;
+      const textMob = document.getElementById('statusTextMob');
       const labels = { running: 'يعمل', stopped: 'متوقف', crashed: 'معطل' };
-      text.textContent = labels[status] || status;
+      const label = labels[status] || status;
+      if (text) text.textContent = label;
+      if (textMob) textMob.textContent = label;
+      const colors = {
+        running: { bg: 'bg-emerald-500/15 text-emerald-400', dot: 'bg-emerald-400' },
+        stopped: { bg: 'bg-gray-800 text-gray-400', dot: 'bg-gray-500' },
+        crashed: { bg: 'bg-red-500/15 text-red-400', dot: 'bg-red-400' },
+      };
+      const c = colors[status] || colors.stopped;
+      badge.className = `status-badge ${c.bg}`;
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full ${c.dot}"></span>${label}`;
       if (usage) {
-        document.getElementById('cpuDisplay').textContent = (usage.cpu || 0) + '%';
-        document.getElementById('ramDisplay').textContent = (usage.memory_mb || 0) + ' MB';
+        const cpu = usage.cpu || 0;
+        const mem = usage.memory_mb || 0;
+        document.getElementById('cpuDisplay').textContent = cpu + '%';
+        document.getElementById('ramDisplay').textContent = mem + ' MB';
+        document.getElementById('cpuBar').style.width = Math.min(cpu, 100) + '%';
+        document.getElementById('ramBar').style.width = Math.min(mem / 128 * 100, 100) + '%';
       }
     }
 
@@ -323,33 +457,34 @@
       try {
         const res = await fetch(`${API}/api/logs/${botId}`, { headers: getHeaders() });
         const data = await res.json();
-        const console = document.getElementById('logConsole');
+        const el = document.getElementById('logConsole');
         if (data.logs && data.logs.length) {
-          console.innerHTML = data.logs.map(l => escapeHtml(l)).join('<br>');
+          el.innerHTML = '';
+          data.logs.forEach(l => { el.appendChild(document.createTextNode(l)); el.appendChild(document.createElement('br')); });
         } else {
-          console.innerHTML = '<span class="text-gray-600">// لا توجد سجلات بعد</span>';
+          el.innerHTML = '<span class="text-gray-600">// لا توجد سجلات بعد</span>';
         }
       } catch (e) {}
     }
 
     function switchTab(tab) {
       document.querySelectorAll('[id^="panel"]').forEach(p => p.classList.add('hidden'));
-      document.querySelectorAll('[id^="tab"]').forEach(t => { t.classList.remove('tab-active'); t.classList.add('text-gray-500'); });
+      document.querySelectorAll('.tab-btn').forEach(t => { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-nav').forEach(t => {
+        t.classList.remove('text-blue-400', 'bg-blue-500/10');
+        t.classList.add('text-gray-500');
+      });
       document.getElementById(`panel${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.remove('hidden');
       const tabEl = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-      tabEl.classList.add('tab-active');
-      tabEl.classList.remove('text-gray-500');
+      if (tabEl) { tabEl.classList.add('active'); }
+      document.querySelectorAll(`.tab-nav[data-tab="${tab}"]`).forEach(el => {
+        el.classList.remove('text-gray-500');
+        el.classList.add('text-blue-400', 'bg-blue-500/10');
+      });
       if (tab === 'logs') { fetchLogsRest(); connectLogs(); }
     }
 
-    function escapeHtml(text) {
-      const d = document.createElement('div');
-      d.textContent = text;
-      return d.innerHTML;
-    }
-
     function appendLog(el, text) {
-      // Safely append log text without innerHTML (prevents XSS from untrusted log output)
       const lines = text.split('\n');
       lines.forEach((line, i) => {
         el.appendChild(document.createTextNode(line));
@@ -360,23 +495,21 @@
 
     function connectLogs() {
       if (ws) { ws.close(); ws = null; }
-      const console = document.getElementById('logConsole');
-      console.innerHTML = '<span class="text-gray-600">// جاري الاتصال...</span>';
+      const el = document.getElementById('logConsole');
+      el.innerHTML = '<span class="text-gray-600">// جاري الاتصال...</span>';
       document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> جاري الاتصال...';
-
       ws = new WebSocket(`${WS_BASE}/api/logs/ws/${botId}?token=${token}`);
-
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'log') {
-            if (console.innerHTML === '<span class="text-gray-600">// جاري الاتصال...</span>') console.innerHTML = '';
-            appendLog(console, msg.data);
+            if (el.innerHTML === '<span class="text-gray-600">// جاري الاتصال...</span>') el.innerHTML = '';
+            appendLog(el, msg.data);
           } else if (msg.type === 'status' && msg.data === 'stopped') {
-            const stoppedSpan = document.createElement('span');
-            stoppedSpan.className = 'text-red-400';
-            stoppedSpan.textContent = '\n// البوت متوقف\n';
-            console.appendChild(stoppedSpan);
+            const span = document.createElement('span');
+            span.className = 'text-red-400';
+            span.textContent = '\n// البوت متوقف\n';
+            el.appendChild(span);
           }
         } catch (e) {}
       };
@@ -385,7 +518,12 @@
       ws.onerror = () => { document.getElementById('liveIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> خطأ'; };
     }
 
-    document.addEventListener('DOMContentLoaded', loadBot);
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.tab-nav[data-tab]').forEach(el => {
+        el.addEventListener('click', () => switchTab(el.dataset.tab));
+      });
+      loadBot();
+    });
   </script>
 </body>
 </html>
