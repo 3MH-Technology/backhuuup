@@ -24,7 +24,7 @@ def _clean_db_url(url: str) -> str:
 _db_url = _clean_db_url(settings.database_url)
 _ssl_required = "sslmode=require" in settings.database_url.lower()
 
-_connect_args = {"timeout": 30, "command_timeout": 30, "statement_cache_size": 0}
+_connect_args = {"timeout": 30, "command_timeout": 30}
 if _ssl_required:
     import ssl
     _connect_args["ssl"] = ssl.create_default_context()
@@ -70,7 +70,6 @@ async def _add_missing_columns(conn):
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS slug VARCHAR(255)",
         "ALTER TABLE bots ADD COLUMN IF NOT EXISTS webhook_token TEXT",
-        "ALTER TABLE bots ALTER COLUMN webhook_token TYPE TEXT",
         "UPDATE bots SET webhook_token = NULL, webhook_active = FALSE, webhook_url = NULL WHERE webhook_token IS NOT NULL AND webhook_token !~ '^gAAAA'",
     ]
     for stmt in migrations:
@@ -78,6 +77,18 @@ async def _add_missing_columns(conn):
             await conn.execute(text(stmt))
         except Exception as e:
             logger.warning(f"Migration skipped (column may already exist): {e}")
+
+    # webhook_token may exist as VARCHAR(64) from old schema — resize to TEXT only if needed
+    try:
+        row = await conn.execute(text(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_name='bots' AND column_name='webhook_token'"
+        ))
+        col_type = row.scalar()
+        if col_type and col_type != 'text':
+            await conn.execute(text("ALTER TABLE bots ALTER COLUMN webhook_token TYPE TEXT"))
+    except Exception as e:
+        logger.warning(f"webhook_token resize skipped: {e}")
 
 
 async def init_db():

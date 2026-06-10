@@ -46,11 +46,17 @@ class SelfHealer:
 
     @classmethod
     async def _heal_once(cls):
-        async with async_session() as session:
-            result = await session.execute(
-                select(Bot).where(Bot.status == "running").with_for_update(skip_locked=True)
-            )
-            bots = result.scalars().all()
+        try:
+            async with async_session() as session:
+                result = await session.execute(
+                    select(Bot).where(Bot.status == "running").with_for_update(skip_locked=True)
+                )
+                bots = result.scalars().all()
+        except Exception as exc:
+            exc_name = type(exc).__name__
+            if "InvalidCachedStatement" in exc_name:
+                return  # Schema changed (migration), will recover on next tick
+            raise
 
             for bot in bots:
                 if ContainerManager.container_exists(bot.container_id):
