@@ -6,6 +6,7 @@ RUN apt-get update -qq && apt-get upgrade -y -qq && \
     apt-get install -y -qq --no-install-recommends \
         gcc g++ libffi-dev python3-dev \
         procps curl git postgresql-client \
+        php-cli php-curl php-mbstring php-xml \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

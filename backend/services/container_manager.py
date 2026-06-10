@@ -99,6 +99,33 @@ class ContainerManager:
         return extracted
 
     @staticmethod
+    def _write_php_ini(work_dir: Path, user_id: int, bot_id: int):
+        basedir = Path("/app/data/bots") / str(user_id) / str(bot_id)
+        ini_dir = work_dir / ".php"
+        ini_dir.mkdir(parents=True, exist_ok=True)
+        ini_path = ini_dir / "php.ini"
+        ini_path.write_text(
+            f"; Wolf Host — per-bot PHP config (user={user_id}, bot={bot_id})\n"
+            f"open_basedir = {basedir}:/tmp/\n"
+            f"disable_functions = exec,system,shell_exec,passthru,popen,proc_open,proc_nice,proc_terminate,proc_close,pcntl_exec,pcntl_fork,pcntl_signal,pcntl_alarm,pcntl_wait,show_source,highlight_file,curl_multi_exec,mail,mb_send_mail\n"
+            f"allow_url_fopen = Off\n"
+            f"allow_url_include = Off\n"
+            f"max_execution_time = 30\n"
+            f"max_input_time = 30\n"
+            f"memory_limit = 64M\n"
+            f"post_max_size = 8M\n"
+            f"upload_max_filesize = 8M\n"
+            f"enable_dl = Off\n"
+            f"register_globals = Off\n"
+            f"display_errors = Off\n"
+            f"display_startup_errors = Off\n"
+            f"log_errors = On\n"
+            f"expose_php = Off\n",
+            encoding="utf-8",
+        )
+        return ini_path
+
+    @staticmethod
     def _write_main_file(work_dir: Path, bot_type: str, content: str):
         filename = "bot.py" if bot_type == "python" else "index.php"
         (work_dir / filename).write_text(content, encoding="utf-8")
@@ -215,7 +242,8 @@ with open(_user, "rb") as _f:
                         if slug_dir.exists():
                             php_files = list(slug_dir.glob("*.php"))
                     entry = php_files[0] if php_files else entry
-                cmd = ["php", "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
+                ini_path = cls._write_php_ini(work_dir, user_id, bot_id)
+                cmd = ["php", "-c", str(ini_path), "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
 
             cf_proxy = os.environ.get("CF_PROXY", "")
             env = {

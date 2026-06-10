@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     app_name: str = "Wolf Host — استضافة الذب هوست"
     developer: str = "الذئب الأبيض 🐺"
     developer_telegram: str = "@j49_c"
-    channel_telegram: str = "@O5O6J"
+    channel_telegram: str = "https://t.me/EQJ_1"
     support_telegram: str = "@Wolfhost_1"
     x_account: str = "https://x.com/wolfhost_1"
 

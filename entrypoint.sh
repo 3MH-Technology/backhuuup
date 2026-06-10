@@ -11,7 +11,7 @@ echo "║        🐺 Wolf Host — استضافة الذب هوست           �
 echo "║     Autonomous Bot Hosting for Arab Developers   ║"
 echo "║     Developer: الذئب الأبيض 🐺                    ║"
 echo "║     Telegram:  @j49_c                            ║"
-echo "║     Channel:   @O5O6J                            ║"
+echo "║     Channel:   https://t.me/EQJ_1                 ║"
 echo "║     X:         https://x.com/wolfhost_1          ║"
 echo "╚══════════════════════════════════════════════════╝"
 echo ""

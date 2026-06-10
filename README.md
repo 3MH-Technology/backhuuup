@@ -14,7 +14,7 @@ license: mit
 منصة استضافة البوتات المجانية للمطورين العرب
 Autonomous Bot Hosting Platform for Arab Developers
 
-**Developer:** الذئب الأبيض 🐺 | **Telegram:** @j49_c | **Channel:** @O5O6J | **X:** https://x.com/wolfhost_1
+**Developer:** الذئب الأبيض 🐺 | **Telegram:** @j49_c | **Channel:** https://t.me/EQJ_1 | **X:** https://x.com/wolfhost_1
 
 ---
 
@@ -47,7 +47,7 @@ cd backend && python main.py
 |---------|------|
 | Developer | الذئب الأبيض 🐺 |
 | Telegram | @j49_c |
-| Channel | @O5O6J |
+| Channel | https://t.me/EQJ_1 |
 | X (Twitter) | https://x.com/wolfhost_1 |
 
 Built with ❤️ for the Arab developer community 🐺
