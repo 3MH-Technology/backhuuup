@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS bots (
     webhook_token   TEXT,
     webhook_token_hash VARCHAR(64),
     restart_count   INTEGER      DEFAULT 0,
-    expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ  DEFAULT NOW(),
     updated_at      TIMESTAMPTZ  DEFAULT NOW()
 );

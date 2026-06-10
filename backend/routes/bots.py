@@ -4,7 +4,7 @@ import secrets
 import shutil
 import unicodedata
 import zipfile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
@@ -20,7 +20,6 @@ from services.auth_service import AuthService
 from services.container_manager import ContainerManager, BOTS_DIR
 from services.limiter import limiter
 from services.webhook_crypto import encrypt_token, decrypt_token, hash_token
-from services.captcha import CaptchaService
 
 router = APIRouter(prefix="/api/bots", tags=["Bot Management"])
 
@@ -37,11 +36,6 @@ class CreateBotCode(BaseModel):
 class UpdateCodeRequest(BaseModel):
     main_file: str
     requirements: str = ""
-
-
-class RenewBotRequest(BaseModel):
-    captcha_id: str = Field(..., min_length=1)
-    answer: str = Field(..., min_length=1)
 
 
 
@@ -109,12 +103,6 @@ def _bot_to_dict(bot: Bot) -> dict:
     # Build webhook URL from decrypted token for display
     plaintext_token = decrypt_token(bot.webhook_token) if bot.webhook_token else None
     webhook_url = f"https://{settings.domain}/api/webhook/{plaintext_token}" if bot.webhook_active and plaintext_token else None
-    # Compute expiry info
-    now = datetime.now(timezone.utc)
-    expires_at = bot.expires_at
-    expired = False
-    if expires_at:
-        expired = expires_at < now
     return {
         "id": bot.id,
         "name": bot.name,
@@ -131,8 +119,6 @@ def _bot_to_dict(bot: Bot) -> dict:
         "webhook_active": bot.webhook_active or False,
         "restart_count": bot.restart_count,
         "created_at": bot.created_at.isoformat() if bot.created_at else None,
-        "expires_at": expires_at.isoformat() if expires_at else None,
-        "expired": expired,
         "resource_usage": usage,
     }
 
@@ -171,8 +157,6 @@ async def list_bots(
             "webhook_active": b.webhook_active or False,
             "webhook_token": _mask_token(b.webhook_token),
             "created_at": b.created_at.isoformat() if b.created_at else None,
-            "expires_at": b.expires_at.isoformat() if b.expires_at else None,
-            "expired": b.expires_at < datetime.now(timezone.utc) if b.expires_at else False,
         }
         for b in bots
     ]
@@ -307,7 +291,6 @@ async def create_bot_upload(
         "bot_type": bot.bot_type,
         "status": "created",
         "is_upload": True,
-        "expires_at": bot.expires_at.isoformat() if bot.expires_at else None,
         "webhook_url": None,
     }
 
@@ -447,46 +430,6 @@ async def update_webhook(
     # Return plaintext token once for user to copy
     plaintext = decrypt_token(bot.webhook_token) if bot.webhook_active else None
     return {"status": "success", "webhook_active": bot.webhook_active, "webhook_url": bot.webhook_url, "webhook_token_full": plaintext}
-
-
-@router.get("/{bot_id}/captcha")
-@limiter.limit("10/minute")
-async def get_captcha(
-    request: Request,
-    bot_id: int,
-    user: User = Depends(AuthService.get_current_user),
-    session: AsyncSession = Depends(get_session),
-):
-    """Generate a captcha challenge for bot renewal."""
-    await _get_user_bot(bot_id, user, session)  # verify ownership
-    return CaptchaService.generate()
-
-
-@router.post("/{bot_id}/renew")
-@limiter.limit("5/minute")
-async def renew_bot(
-    request: Request,
-    bot_id: int,
-    req: RenewBotRequest,
-    user: User = Depends(AuthService.get_current_user),
-    session: AsyncSession = Depends(get_session),
-):
-    """Verify captcha and extend bot expiry by 4 days."""
-    bot = await _get_user_bot(bot_id, user, session)
-
-    if not CaptchaService.verify(req.captcha_id, req.answer):
-        raise HTTPException(status_code=400, detail="إجابة الكابتشا خاطئة. حاول مرة أخرى.")
-
-    now = datetime.now(timezone.utc)
-    base = bot.expires_at if bot.expires_at and bot.expires_at > now else now
-    bot.expires_at = base + timedelta(days=4)
-    await session.commit()
-
-    return {
-        "status": "success",
-        "message": "تم تجديد البوت لمدة 4 أيام",
-        "expires_at": bot.expires_at.isoformat(),
-    }
 
 
 @router.delete("/{bot_id}")
