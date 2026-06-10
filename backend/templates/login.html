@@ -54,6 +54,16 @@
             class="input-field w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
             placeholder="••••••••">
         </div>
+        <div id="captchaSection" class="hidden">
+          <label class="block text-sm font-medium text-gray-300 mb-2">التحقق الأمني</label>
+          <div class="flex gap-2">
+            <div id="captchaQuestion" class="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-yellow-300 text-center font-bold text-lg"></div>
+            <input type="number" id="captchaAnswer" required
+              class="w-28 px-3 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none text-center"
+              placeholder="الإجابة">
+          </div>
+          <input type="hidden" id="captchaId">
+        </div>
         <button type="submit"
           class="w-full py-3 bg-gradient-to-l from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-blue-500/20">
           تسجيل الدخول
@@ -88,6 +98,20 @@
 
   <script>
     const API = window.location.origin;
+    let captchaId = '';
+
+    async function loadCaptcha() {
+      try {
+        const res = await fetch(`${API}/api/auth/captcha`);
+        const data = await res.json();
+        captchaId = data.captcha_id;
+        document.getElementById('captchaQuestion').textContent = data.question;
+        document.getElementById('captchaId').value = data.captcha_id;
+        document.getElementById('captchaSection').classList.remove('hidden');
+      } catch (e) { console.error('Captcha failed', e); }
+    }
+    loadCaptcha();
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = document.getElementById('username').value;
@@ -95,11 +119,12 @@
       const errorEl = document.getElementById('errorMsg');
       errorEl.classList.add('hidden');
       try {
+        const body = { username, password };
+        if (captchaId) {
+          body.captcha_id = captchaId;
+          body.captcha_answer = document.getElementById('captchaAnswer').value;
+        }
         const res = await fetch(`${API}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-        });
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem('token', data.access_token);

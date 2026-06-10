@@ -88,6 +88,8 @@ async def lifespan(app: FastAPI):
     SelfHealer.start()
     logger.info("✅ Self-healer activated (30s polling)")
 
+    ContainerManager.check_docker()
+
     monitor_task = asyncio.create_task(ContainerManager.monitor_loop())
     logger.info("✅ Resource monitor activated (3s polling)")
 

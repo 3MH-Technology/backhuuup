@@ -17,6 +17,7 @@ except ImportError:
 import psutil
 
 from config import settings
+from services import docker_manager
 
 logger = logging.getLogger("wolfhost.container")
 
@@ -31,6 +32,13 @@ class ContainerManager:
     _port_pool: set[int] = set(range(9000, 10000))
     _resource_cache: dict[str, dict] = {}
     _port_lock = asyncio.Lock()
+
+    @staticmethod
+    def check_docker():
+        if docker_manager.is_available():
+            logger.info("✅ Docker is available — bots will run in isolated containers")
+        else:
+            logger.info("⚠️ Docker not available — bots will run as subprocesses")
 
     @staticmethod
     async def _allocate_port() -> int:
@@ -50,6 +58,13 @@ class ContainerManager:
     def get_bot_port(container_id: str) -> int | None:
         inst = ContainerManager._instances.get(container_id)
         return inst["port"] if inst else None
+
+    @staticmethod
+    def get_bot_target(container_id: str) -> str | None:
+        inst = ContainerManager._instances.get(container_id)
+        if inst:
+            return inst.get("target", "127.0.0.1:0")
+        return None
 
     @staticmethod
     def container_name(user_id: int, slug: str) -> str:
@@ -198,10 +213,56 @@ with open(_user, "rb") as _f:
             if bot_type == "python":
                 cls._write_requirements(work_dir, requirements)
 
+        port = await cls._allocate_port()
+
+        # ── Try Docker isolation first ──
+        if docker_manager.is_available():
+            try:
+                # Ensure main file exists even for upload-based bots
+                if bot_type == "php" and not (work_dir / "index.php").exists():
+                    php_files = list(work_dir.glob("*.php"))
+                    entry = php_files[0] if php_files else None
+                if bot_type == "python" and not is_upload:
+                    cls._write_boot_loader(work_dir)
+                if bot_type == "php":
+                    cls._write_php_ini(work_dir, user_id, bot_id)
+
+                result = await docker_manager.start_container(
+                    name=name,
+                    bot_type=bot_type,
+                    work_dir=str(work_dir),
+                    port=port,
+                    main_file_content=main_file_content,
+                    requirements=requirements,
+                    is_upload=is_upload,
+                )
+                target = f"{name}:{port}" if result.get("ip") else f"127.0.0.1:{port}"
+                cls._instances[name] = {
+                    "docker": True,
+                    "container_id": result.get("container_id"),
+                    "target": target,
+                    "port": port,
+                    "bot_type": bot_type,
+                    "work_dir": work_dir,
+                    "user_id": user_id,
+                    "bot_id": bot_id,
+                }
+                cls._resource_cache[name] = {"cpu": 0.0, "memory_mb": 0.0}
+                logger.info(f"Bot {name} started in Docker container (target {target})")
+                return {
+                    "status": "success",
+                    "container_id": name,
+                    "container_name": name,
+                    "message": f"Bot {name} started in Docker",
+                }
+            except Exception as e:
+                logger.warning(f"Docker start failed for {name}, falling back to subprocess: {e}")
+                cls._release_port(port)
+                port = await cls._allocate_port()
+
+        # ── Fallback: subprocess isolation ──
         log_file = work_dir / "bot.log"
         log_fh = None
-
-        port = await cls._allocate_port()
 
         try:
             if bot_type == "php":
@@ -289,9 +350,11 @@ with open(_user, "rb") as _f:
             )
 
             cls._instances[name] = {
+                "docker": False,
                 "process": process,
                 "log_file": log_file,
                 "log_fh": log_fh,
+                "target": f"127.0.0.1:{port}",
                 "bot_type": bot_type,
                 "work_dir": work_dir,
                 "user_id": user_id,
@@ -342,6 +405,19 @@ with open(_user, "rb") as _f:
         if not instance:
             return {"status": "error", "message": "Bot not running"}
 
+        port = instance.get("port")
+
+        # Docker container stop
+        if instance.get("docker"):
+            await docker_manager.stop_container(container_id)
+            cls._instances.pop(container_id, None)
+            cls._resource_cache.pop(container_id, None)
+            if port:
+                cls._release_port(port)
+            logger.info(f"Docker bot {container_id} stopped (port {port} released)")
+            return {"status": "success", "message": "Bot stopped"}
+
+        # Subprocess stop
         process = instance["process"]
         try:
             if process.returncode is None:
@@ -392,6 +468,8 @@ with open(_user, "rb") as _f:
         instance = cls._instances.get(container_id)
         if not instance:
             return "stopped"
+        if instance.get("docker"):
+            return docker_manager.get_status(container_id)
         process = instance["process"]
         if process.returncode is not None:
             cls._instances.pop(container_id, None)
@@ -402,8 +480,11 @@ with open(_user, "rb") as _f:
     def get_resource_usage(cls, container_id: str) -> dict:
         if not container_id:
             return {"cpu": 0, "memory_mb": 0}
-        if container_id not in cls._instances:
+        instance = cls._instances.get(container_id)
+        if not instance:
             return {"cpu": 0, "memory_mb": 0}
+        if instance.get("docker"):
+            return docker_manager.get_resource_usage(container_id)
         cached = cls._resource_cache.get(container_id)
         if cached:
             return cached
@@ -428,6 +509,9 @@ with open(_user, "rb") as _f:
     @classmethod
     def _poll_all_resources(cls):
         for cid, inst in list(cls._instances.items()):
+            if inst.get("docker"):
+                cls._resource_cache[cid] = docker_manager.get_resource_usage(cid)
+                continue
             process = inst.get("process")
             if not process or process.returncode is not None:
                 cls._resource_cache.pop(cid, None)
@@ -454,8 +538,11 @@ with open(_user, "rb") as _f:
 
     @classmethod
     async def cleanup_stale(cls):
+        docker_manager.cleanup_stale()
         stale = []
         for cid, inst in cls._instances.items():
+            if inst.get("docker"):
+                continue
             process = inst.get("process")
             if process and process.returncode is not None:
                 stale.append(cid)

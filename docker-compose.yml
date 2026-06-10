@@ -65,6 +65,8 @@ services:
       PHP_IMAGE:               ${PHP_IMAGE:-php:8.2-alpine}
       DOCKER_NETWORK:          estidafa_bot_net
     volumes:
+      # Docker socket for managing sibling bot containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       # Shared tmp for bot code artifacts
       - bot_code:/tmp
     networks:

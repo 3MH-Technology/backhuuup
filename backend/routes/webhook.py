@@ -67,10 +67,10 @@ async def _proxy_bot(request: Request, bot, path: str):
     container_status = ContainerManager.get_status(bot.container_id)
     if container_status != "running":
         return {"ok": False, "error": f"Bot is {container_status}", "bot_status": container_status}
-    port = ContainerManager.get_bot_port(bot.container_id)
-    if not port:
-        return {"ok": False, "error": "Bot port not assigned"}
-    target_url = f"http://127.0.0.1:{port}/{path}" if path else f"http://127.0.0.1:{port}/"
+    target = ContainerManager.get_bot_target(bot.container_id)
+    if not target:
+        return {"ok": False, "error": "Bot target not assigned"}
+    target_url = f"http://{target}/{path}" if path else f"http://{target}/"
     return await _stream(request, target_url, bot.slug)
 
 
