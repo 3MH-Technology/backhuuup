@@ -121,3 +121,19 @@ async def _stream(request: Request, target_url: str, slug: str):
             yield b'{"ok":false,"error":"Proxy upstream error"}'
 
     return StreamingResponse(stream_response(), media_type="application/json")
+
+
+# ── Public bot proxy by slug (no webhook token required) ──
+public_router = APIRouter(prefix="/p", tags=["Public Bot Proxy"])
+
+
+@public_router.api_route("/{slug}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+@limiter.limit("120/minute")
+async def proxy_public_path(request: Request, slug: str, path: str = ""):
+    return await _proxy(request, path, slug)
+
+
+@public_router.api_route("/{slug}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+@limiter.limit("120/minute")
+async def proxy_public_root(request: Request, slug: str):
+    return await _proxy(request, "", slug)

@@ -256,6 +256,17 @@
                 </div>
               </div>
               <p class="text-xs text-gray-600">الرابط فريد وآمن. لا أحد يقدر يخمنه.</p>
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5 mt-4">الرابط العام للبوت <span class="text-gray-600">(بدون توثيق)</span></label>
+                <div class="flex gap-2">
+                  <input type="text" id="publicBotUrl" readonly class="code-area flex-1 px-4 py-2.5 bg-black/50 border border-gray-700/30 rounded-xl text-yellow-300 text-sm" value="">
+                  <button onclick="copyPublicUrl()" class="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 text-white text-sm font-medium rounded-xl transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    نسخ
+                  </button>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">يعمل فقط إذا البوت شغال. مناسب لسكربتات PHP و APIs.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -327,6 +338,7 @@
         document.getElementById('infoId').textContent = bot.id;
         document.getElementById('infoName').textContent = bot.name;
         document.getElementById('infoSlug').textContent = bot.slug;
+        updatePublicUrl(bot.slug);
         document.getElementById('infoType').textContent = bot.bot_type;
         document.getElementById('infoContainer').textContent = bot.container_id || '—';
         document.getElementById('infoCreated').textContent = bot.created_at ? new Date(bot.created_at).toLocaleDateString('ar-SA') : '—';
@@ -442,6 +454,19 @@
       const url = document.getElementById('webhookUrl');
       url.select();
       navigator.clipboard.writeText(url.value);
+    }
+
+    function copyPublicUrl() {
+      const url = document.getElementById('publicBotUrl');
+      url.select();
+      navigator.clipboard.writeText(url.value);
+    }
+
+    function updatePublicUrl(slug) {
+      const el = document.getElementById('publicBotUrl');
+      if (el && slug) {
+        el.value = `https://wolf-host.pages.dev/p/${slug}/`;
+      }
     }
 
     async function deleteBot() {
