@@ -31,7 +31,7 @@ def is_available() -> bool:
     except Exception as e:
         _client = None
         _available = False
-        logger.warning(f"Docker not available, falling back to subprocess isolation: {e}")
+        logger.warning(f"Docker not available — bot execution is disabled: {e}")
     return _available
 
 

@@ -2,19 +2,8 @@ import asyncio
 import logging
 import os
 import re
-import subprocess
-import sys
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
-
-try:
-    import resource
-    HAS_RESOURCE = True
-except ImportError:
-    HAS_RESOURCE = False
-
-import psutil
 
 from config import settings
 from services import docker_manager
@@ -38,7 +27,8 @@ class ContainerManager:
         if docker_manager.is_available():
             logger.info("✅ Docker is available — bots will run in isolated containers")
         else:
-            logger.info("⚠️ Docker not available — bots will run as subprocesses")
+            logger.error("❌ Docker is NOT available — bot execution is disabled")
+            logger.error("   Install Docker and restart the platform to enable bot hosting")
 
     @staticmethod
     async def _allocate_port() -> int:
@@ -149,7 +139,7 @@ class ContainerManager:
         elif bot_type == "php":
             filename = "index.php"
         else:
-            return  # static bots don't need a main file
+            return
         (work_dir / filename).write_text(content, encoding="utf-8")
 
     @staticmethod
@@ -159,14 +149,10 @@ class ContainerManager:
 
     @staticmethod
     def _write_boot_loader(work_dir: Path):
-        """Boot loader — patches telebot proxy, runs user bot."""
         code = r'''"""_wolf_boot.py — Wolf Host boot loader."""
 import os as _os, sys as _sys
 
 # ── auto-configure Telegram proxy (local HTTP → Cloudflare Worker) ──
-# Bot subprocess connects via HTTP to the main app (port 7860),
-# which forwards to the Cloudflare Worker via HTTPS.
-# This avoids SSL memory overhead in the memory-limited bot subprocess.
 _cf = _os.environ.get("CF_PROXY", "")
 if _cf:
     _proxy_url = "http://127.0.0.1:7860/api/__proxy/bot{0}/{1}"
@@ -200,10 +186,12 @@ with open(_user, "rb") as _f:
     async def start_bot(cls, bot_id: int, user_id: int, slug: str,
                         bot_type: str, main_file_content: str = "",
                         requirements: str = "", is_upload: bool = False) -> dict:
+        if not docker_manager.is_available():
+            return {"status": "error", "message": "Docker is required — bot execution disabled without Docker"}
+
         name = cls.container_name(user_id, slug)
         work_dir = cls._work_dir(user_id, bot_id)
 
-        # Stop any existing instance first (prevents multiple copies → 409 Conflict)
         if name in cls._instances:
             logger.info(f"Stopping previous instance of {name} before restart")
             await cls.stop_bot(name)
@@ -215,230 +203,54 @@ with open(_user, "rb") as _f:
 
         port = await cls._allocate_port()
 
-        # ── Try Docker isolation first ──
-        if docker_manager.is_available():
-            try:
-                # Ensure main file exists even for upload-based bots
-                if bot_type == "php" and not (work_dir / "index.php").exists():
-                    php_files = list(work_dir.glob("*.php"))
-                    entry = php_files[0] if php_files else None
-                if bot_type == "python" and not is_upload:
-                    cls._write_boot_loader(work_dir)
-                if bot_type == "php":
-                    cls._write_php_ini(work_dir, user_id, bot_id)
-
-                result = await docker_manager.start_container(
-                    name=name,
-                    bot_type=bot_type,
-                    work_dir=str(work_dir),
-                    port=port,
-                    main_file_content=main_file_content,
-                    requirements=requirements,
-                    is_upload=is_upload,
-                )
-                target = f"{name}:{port}" if result.get("ip") else f"127.0.0.1:{port}"
-                cls._instances[name] = {
-                    "docker": True,
-                    "container_id": result.get("container_id"),
-                    "target": target,
-                    "port": port,
-                    "bot_type": bot_type,
-                    "work_dir": work_dir,
-                    "user_id": user_id,
-                    "bot_id": bot_id,
-                }
-                cls._resource_cache[name] = {"cpu": 0.0, "memory_mb": 0.0}
-                logger.info(f"Bot {name} started in Docker container (target {target})")
-                return {
-                    "status": "success",
-                    "container_id": name,
-                    "container_name": name,
-                    "message": f"Bot {name} started in Docker",
-                }
-            except Exception as e:
-                logger.warning(f"Docker start failed for {name}, falling back to subprocess: {e}")
-                cls._release_port(port)
-                port = await cls._allocate_port()
-
-        # ── Fallback: subprocess isolation ──
-        log_file = work_dir / "bot.log"
-        log_fh = None
-
         try:
-            if bot_type == "php":
-                _php_check = await asyncio.create_subprocess_exec(
-                    "php", "-v", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-                rc = await _php_check.wait()
-                if rc != 0:
-                    raise RuntimeError("PHP binary not found or not executable")
-
-            if bot_type == "static":
-                cmd = [sys.executable, "-m", "http.server", str(port), "-d", str(work_dir)]
-
-            elif bot_type == "python":
-                # ── isolated venv per bot ──
-                venv_path = work_dir / "venv"
-                python_exe = str(venv_path / "bin" / "python")
-                loop = asyncio.get_event_loop()
-                if not (venv_path / "pyvenv.cfg").exists():
-                    logger.info(f"Creating venv for {name} at {venv_path}")
-                    await loop.run_in_executor(
-                        None,
-                        lambda: subprocess.run(
-                            [sys.executable, "-m", "venv", str(venv_path)],
-                            capture_output=True, timeout=60,
-                        ),
-                    )
-                # ── auto-install requirements in isolated venv ──
-                req_file = work_dir / "requirements.txt"
-                if req_file.exists() and req_file.stat().st_size > 0:
-                    await loop.run_in_executor(
-                        None,
-                        lambda: subprocess.run(
-                            [python_exe, "-m", "pip", "install", "-q",
-                             "-r", str(req_file)],
-                            cwd=str(work_dir),
-                            capture_output=True, timeout=120,
-                        ),
-                    )
+            if bot_type == "python":
                 cls._write_boot_loader(work_dir)
-                entry = work_dir / "bot.py"
-                if not entry.exists():
-                    py_files = [f for f in work_dir.glob("*.py") if f.name != "_wolf_boot.py"]
-                    if not py_files:
-                        slug_dir = work_dir / slug
-                        if slug_dir.exists():
-                            py_files = [f for f in slug_dir.glob("*.py") if f.name != "_wolf_boot.py"]
-                    entry = py_files[0] if py_files else entry
-                cmd = [python_exe, "-u", str(work_dir / "_wolf_boot.py"), str(entry)]
-            elif bot_type == "php":
-                entry = work_dir / "index.php"
-                if not entry.exists():
-                    php_files = list(work_dir.glob("*.php"))
-                    if not php_files:
-                        slug_dir = work_dir / slug
-                        if slug_dir.exists():
-                            php_files = list(slug_dir.glob("*.php"))
-                    entry = php_files[0] if php_files else entry
-                ini_path = cls._write_php_ini(work_dir, user_id, bot_id)
-                cmd = ["php", "-c", str(ini_path), "-S", f"127.0.0.1:{port}", "-t", str(work_dir), str(entry)]
+            if bot_type == "php":
+                cls._write_php_ini(work_dir, user_id, bot_id)
 
-            cf_proxy = os.environ.get("CF_PROXY", "")
-            env = {
-                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-                "LANG": os.environ.get("LANG", "en_US.UTF-8"),
-                "LC_ALL": os.environ.get("LC_ALL", "en_US.UTF-8"),
-                "HOME": str(work_dir),
-                "TMPDIR": str(work_dir),
-                "PYTHONUNBUFFERED": "1",
-                "PYTHONNOUSERSITE": "1",
-                "PORT": str(port),
-                "CF_PROXY": cf_proxy,
-            }
-
-            # Open log file only after all prep work succeeded
-            log_fh = open(log_file, "w", encoding="utf-8")
-
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=log_fh,
-                stderr=subprocess.STDOUT,
-                cwd=str(work_dir),
-                env=env,
-                preexec_fn=lambda: _set_limits() if os.name != "nt" else None,
+            result = await docker_manager.start_container(
+                name=name,
+                bot_type=bot_type,
+                work_dir=str(work_dir),
+                port=port,
+                main_file_content=main_file_content,
+                requirements=requirements,
+                is_upload=is_upload,
             )
-
+            target = f"{name}:{port}"
             cls._instances[name] = {
-                "docker": False,
-                "process": process,
-                "log_file": log_file,
-                "log_fh": log_fh,
-                "target": f"127.0.0.1:{port}",
+                "target": target,
+                "port": port,
                 "bot_type": bot_type,
                 "work_dir": work_dir,
                 "user_id": user_id,
                 "bot_id": bot_id,
-                "port": port,
             }
             cls._resource_cache[name] = {"cpu": 0.0, "memory_mb": 0.0}
-
-            # Brief sleep to catch immediate startup failures (e.g. missing binary)
-            await asyncio.sleep(0.5)
-            if process.returncode is not None:
-                if log_fh:
-                    log_fh.flush()
-                stderr_snippet = ""
-                try:
-                    stderr_snippet = log_file.read_text(encoding="utf-8", errors="replace")[-500:]
-                except Exception:
-                    pass
-                msg = f"Bot {name} exited immediately (code {process.returncode}): {stderr_snippet}"
-                logger.error(msg)
-                cls._release_port(port)
-                cls._instances.pop(name, None)
-                if log_fh:
-                    log_fh.close()
-                return {"status": "error", "message": msg}
-
-            logger.info(f"Bot {name} started (PID {process.pid}, port {port})")
+            logger.info(f"Bot {name} started in Docker container (target {target})")
             return {
                 "status": "success",
                 "container_id": name,
                 "container_name": name,
-                "message": f"Bot {name} started",
+                "message": f"Bot {name} started in Docker",
             }
-
         except Exception as e:
-            if log_fh:
-                log_fh.close()
             cls._release_port(port)
-            logger.error(f"Failed to start bot {name}: {e}")
+            cls._instances.pop(name, None)
+            cls._resource_cache.pop(name, None)
+            logger.error(f"Failed to start bot {name} in Docker: {e}")
             return {"status": "error", "message": str(e)}
 
     @classmethod
     async def stop_bot(cls, container_id: str) -> dict:
         if not container_id:
             return {"status": "error", "message": "No container ID"}
-
-        instance = cls._instances.get(container_id)
+        instance = cls._instances.pop(container_id, None)
         if not instance:
             return {"status": "error", "message": "Bot not running"}
-
         port = instance.get("port")
-
-        # Docker container stop
-        if instance.get("docker"):
-            await docker_manager.stop_container(container_id)
-            cls._instances.pop(container_id, None)
-            cls._resource_cache.pop(container_id, None)
-            if port:
-                cls._release_port(port)
-            logger.info(f"Docker bot {container_id} stopped (port {port} released)")
-            return {"status": "success", "message": "Bot stopped"}
-
-        # Subprocess stop
-        process = instance["process"]
-        try:
-            if process.returncode is None:
-                proc = psutil.Process(process.pid)
-                for child in proc.children(recursive=True):
-                    child.terminate()
-                proc.terminate()
-                try:
-                    await asyncio.wait_for(process.wait(), timeout=5)
-                except asyncio.TimeoutError:
-                    for child in proc.children(recursive=True):
-                        child.kill()
-                    proc.kill()
-                    await process.wait()
-        except (psutil.NoSuchProcess, ProcessLookupError):
-            pass
-
-        port = instance.get("port")
-        if instance.get("log_fh"):
-            instance["log_fh"].close()
-        cls._instances.pop(container_id, None)
+        await docker_manager.stop_container(container_id)
         cls._resource_cache.pop(container_id, None)
         if port:
             cls._release_port(port)
@@ -453,13 +265,13 @@ with open(_user, "rb") as _f:
         if not instance:
             return ""
         log_file = instance.get("log_file")
-        if not log_file or not log_file.exists():
-            return ""
-        try:
-            lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
-            return "\n".join(lines[-tail:])
-        except Exception:
-            return ""
+        if log_file and log_file.exists():
+            try:
+                lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                return "\n".join(lines[-tail:])
+            except Exception:
+                pass
+        return ""
 
     @classmethod
     def get_status(cls, container_id: str) -> str:
@@ -468,13 +280,7 @@ with open(_user, "rb") as _f:
         instance = cls._instances.get(container_id)
         if not instance:
             return "stopped"
-        if instance.get("docker"):
-            return docker_manager.get_status(container_id)
-        process = instance["process"]
-        if process.returncode is not None:
-            cls._instances.pop(container_id, None)
-            return "crashed" if process.returncode != 0 else "stopped"
-        return "running"
+        return docker_manager.get_status(container_id)
 
     @classmethod
     def get_resource_usage(cls, container_id: str) -> dict:
@@ -483,8 +289,6 @@ with open(_user, "rb") as _f:
         instance = cls._instances.get(container_id)
         if not instance:
             return {"cpu": 0, "memory_mb": 0}
-        if instance.get("docker"):
-            return docker_manager.get_resource_usage(container_id)
         cached = cls._resource_cache.get(container_id)
         if cached:
             return cached
@@ -508,68 +312,17 @@ with open(_user, "rb") as _f:
 
     @classmethod
     def _poll_all_resources(cls):
-        for cid, inst in list(cls._instances.items()):
-            if inst.get("docker"):
-                cls._resource_cache[cid] = docker_manager.get_resource_usage(cid)
-                continue
-            process = inst.get("process")
-            if not process or process.returncode is not None:
-                cls._resource_cache.pop(cid, None)
-                continue
-            try:
-                proc = psutil.Process(process.pid)
-                with proc.oneshot():
-                    cpu = proc.cpu_percent(interval=0.1)
-                    mem = proc.memory_info().rss / 1024 / 1024
-                    children = proc.children(recursive=True)
-                    for child in children:
-                        try:
-                            with child.oneshot():
-                                cpu += child.cpu_percent(interval=0.1)
-                                mem += child.memory_info().rss / 1024 / 1024
-                        except (psutil.NoSuchProcess, psutil.AccessDenied):
-                            pass
-                cls._resource_cache[cid] = {
-                    "cpu": round(min(cpu, 100.0), 1),
-                    "memory_mb": round(mem, 1),
-                }
-            except (psutil.NoSuchProcess, psutil.AccessDenied, ProcessLookupError):
-                cls._resource_cache.pop(cid, None)
+        for cid in list(cls._instances.keys()):
+            cls._resource_cache[cid] = docker_manager.get_resource_usage(cid)
 
     @classmethod
     async def cleanup_stale(cls):
         docker_manager.cleanup_stale()
         stale = []
         for cid, inst in cls._instances.items():
-            if inst.get("docker"):
-                continue
-            process = inst.get("process")
-            if process and process.returncode is not None:
+            status = docker_manager.get_status(cid)
+            if status != "running":
                 stale.append(cid)
         for cid in stale:
-            inst = cls._instances.pop(cid, None)
-            if inst and inst.get("log_fh"):
-                inst["log_fh"].close()
+            cls._instances.pop(cid, None)
             cls._resource_cache.pop(cid, None)
-
-
-def _set_limits():
-    if not HAS_RESOURCE:
-        return
-    try:
-        mem_bytes = settings.container_mem_limit_mb * 1024 * 1024
-        resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
-    except Exception:
-        pass
-    try:
-        resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
-    except Exception:
-        pass
-    try:
-        resource.setrlimit(resource.RLIMIT_NPROC, (50, 50))
-    except Exception:
-        pass
-    try:
-        resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
-    except Exception:
-        pass
